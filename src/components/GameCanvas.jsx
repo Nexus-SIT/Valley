@@ -4,6 +4,7 @@ import { REGIONS, MAP_WIDTH, MAP_HEIGHT, SPAWN_X, SPAWN_Y, NEXUS_DOOR_BOX } from
 
 const VIEWPORT_W = 800;
 const VIEWPORT_H = 600;
+const ZOOM = 4; // Zoom factor to make character visible
 
 const GameCanvas = ({ onNexusInteract }) => {
   const canvasRef = useRef(null);
@@ -43,20 +44,21 @@ const GameCanvas = ({ onNexusInteract }) => {
   }, [onNexusInteract]);
 
   const render = (ctx, player) => {
-    // Calculate Camera Position (centered on player)
-    let camX = player.x + player.width / 2 - VIEWPORT_W / 2;
-    let camY = player.y + player.height / 2 - VIEWPORT_H / 2;
+    // Calculate Camera Position (centered on player, accounting for zoom)
+    let camX = player.x + player.width / 2 - (VIEWPORT_W / ZOOM) / 2;
+    let camY = player.y + player.height / 2 - (VIEWPORT_H / ZOOM) / 2;
 
     // Clamp camera to map boundaries
-    camX = Math.max(0, Math.min(camX, MAP_WIDTH - VIEWPORT_W));
-    camY = Math.max(0, Math.min(camY, MAP_HEIGHT - VIEWPORT_H));
+    camX = Math.max(0, Math.min(camX, MAP_WIDTH - (VIEWPORT_W / ZOOM)));
+    camY = Math.max(0, Math.min(camY, MAP_HEIGHT - (VIEWPORT_H / ZOOM)));
 
     // Clear and fill base (just in case)
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, VIEWPORT_W, VIEWPORT_H);
 
     ctx.save();
-    // Translate the context by the camera offset
+    // Apply zoom scaling and translate the context by the camera offset
+    ctx.scale(ZOOM, ZOOM);
     ctx.translate(-camX, -camY);
 
     // 1. Draw Regions
