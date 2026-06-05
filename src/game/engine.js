@@ -13,6 +13,9 @@ export class GameEngine {
       width: PLAYER_WIDTH,
       height: PLAYER_HEIGHT,
       color: '#ffeb3b', // simple yellow player
+      isMoving: false,
+      animFrame: 0,
+      animTimer: 0,
     };
     
     this.keys = {
@@ -62,6 +65,16 @@ export class GameEngine {
 
     if (dx !== 0 || dy !== 0) {
       this.movePlayer(dx, dy);
+      this.player.isMoving = true;
+      this.player.animTimer++;
+      if (this.player.animTimer >= 8) { // 8 ticks per frame
+        this.player.animTimer = 0;
+        this.player.animFrame = (this.player.animFrame + 1) % 4;
+      }
+    } else {
+      this.player.isMoving = false;
+      this.player.animTimer = 0;
+      this.player.animFrame = 0;
     }
   };
 

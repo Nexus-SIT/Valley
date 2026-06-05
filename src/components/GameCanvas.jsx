@@ -8,7 +8,10 @@ const GameCanvas = ({ onInteract }) => {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
   const reqRef = useRef(null);
-  const playerImgRef = useRef(null);
+  const playerImagesRef = useRef({
+    idle: null,
+    walk: []
+  });
   const [dimensions, setDimensions] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   useEffect(() => {
@@ -18,9 +21,17 @@ const GameCanvas = ({ onInteract }) => {
   }, []);
 
   useEffect(() => {
-    // Initialize image
-    playerImgRef.current = new Image();
-    playerImgRef.current.src = '/characters/main/manish.png';
+    // Initialize images
+    const idleImg = new Image();
+    idleImg.src = '/characters/main/manish.png';
+    playerImagesRef.current.idle = idleImg;
+
+    playerImagesRef.current.walk = [];
+    for (let i = 1; i <= 4; i++) {
+      const walkImg = new Image();
+      walkImg.src = `/characters/main/walk${i}.png`;
+      playerImagesRef.current.walk.push(walkImg);
+    }
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -139,9 +150,14 @@ const GameCanvas = ({ onInteract }) => {
     ctx.strokeRect(SIGN_BOX.x, SIGN_BOX.y, SIGN_BOX.w, SIGN_BOX.h);
 
     // 3. Draw Player
-    if (playerImgRef.current && playerImgRef.current.complete && playerImgRef.current.naturalWidth > 0) {
-      const natW = playerImgRef.current.naturalWidth;
-      const natH = playerImgRef.current.naturalHeight;
+    let currentImg = playerImagesRef.current.idle;
+    if (player.isMoving && playerImagesRef.current.walk.length === 4) {
+      currentImg = playerImagesRef.current.walk[player.animFrame];
+    }
+
+    if (currentImg && currentImg.complete && currentImg.naturalWidth > 0) {
+      const natW = currentImg.naturalWidth;
+      const natH = currentImg.naturalHeight;
       
       // Scale image to a reasonable size relative to the collision box
       // Let's make it about 1.5x the height of the collision box
@@ -152,7 +168,7 @@ const GameCanvas = ({ onInteract }) => {
       const drawX = player.x + (player.width - drawW) / 2;
       const drawY = player.y + (player.height - drawH);
 
-      ctx.drawImage(playerImgRef.current, drawX, drawY, drawW, drawH);
+      ctx.drawImage(currentImg, drawX, drawY, drawW, drawH);
     } else {
       ctx.fillStyle = player.color;
       ctx.fillRect(player.x, player.y, player.width, player.height);
