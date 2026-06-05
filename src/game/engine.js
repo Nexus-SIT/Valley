@@ -1,17 +1,18 @@
-import { mapGrid, TILE_SIZE, isSolid, NEXUS_DOOR } from './mapData';
+import { REGIONS, MAP_WIDTH, MAP_HEIGHT, NEXUS_DOOR_BOX } from './mapData';
 
-// Player size
-export const PLAYER_SIZE = 24;
-export const PLAYER_SPEED = 3;
+// Tiny player size to match map scale
+export const PLAYER_WIDTH = 16;
+export const PLAYER_HEIGHT = 24;
+export const PLAYER_SPEED = 4;
 
 export class GameEngine {
   constructor(startX, startY, onInteract) {
     this.player = {
       x: startX,
       y: startY,
-      width: PLAYER_SIZE,
-      height: PLAYER_SIZE,
-      color: '#ffeb3b', // simple yellow square player
+      width: PLAYER_WIDTH,
+      height: PLAYER_HEIGHT,
+      color: '#ffeb3b', // simple yellow player
     };
     
     this.keys = {
@@ -80,30 +81,26 @@ export class GameEngine {
   };
 
   checkCollision = (newX, newY) => {
-    // Collision box corners
     const left = newX;
     const right = newX + this.player.width;
     const top = newY;
     const bottom = newY + this.player.height;
 
     // Map boundaries
-    if (left < 0 || right > mapGrid[0].length * TILE_SIZE || top < 0 || bottom > mapGrid.length * TILE_SIZE) {
-      return true; // Collided with edge of world
+    if (left < 0 || right > MAP_WIDTH || top < 0 || bottom > MAP_HEIGHT) {
+      return true;
     }
 
-    // Check tiles under the 4 corners of the player
-    const tilesToCheck = [
-      { col: Math.floor(left / TILE_SIZE), row: Math.floor(top / TILE_SIZE) },
-      { col: Math.floor(right / TILE_SIZE), row: Math.floor(top / TILE_SIZE) },
-      { col: Math.floor(left / TILE_SIZE), row: Math.floor(bottom / TILE_SIZE) },
-      { col: Math.floor(right / TILE_SIZE), row: Math.floor(bottom / TILE_SIZE) },
-    ];
-
-    for (let tile of tilesToCheck) {
-      if (tile.row >= 0 && tile.row < mapGrid.length && tile.col >= 0 && tile.col < mapGrid[0].length) {
-        const tileType = mapGrid[tile.row][tile.col];
-        if (isSolid(tileType)) {
-          return true; // Collision detected
+    // AABB Collision with solid regions
+    for (let region of REGIONS) {
+      if (region.solid) {
+        if (
+          right > region.x &&
+          left < region.x + region.w &&
+          bottom > region.y &&
+          top < region.y + region.h
+        ) {
+          return true; // Collided
         }
       }
     }
@@ -112,12 +109,21 @@ export class GameEngine {
   };
 
   checkInteraction = () => {
-    // Simple logic: if player is near the Nexus door
-    const centerCol = Math.floor((this.player.x + this.player.width / 2) / TILE_SIZE);
-    const centerRow = Math.floor((this.player.y + this.player.height / 2) / TILE_SIZE);
+    // Check intersection with Nexus door box
+    const left = this.player.x;
+    const right = this.player.x + this.player.width;
+    const top = this.player.y;
+    const bottom = this.player.y + this.player.height;
 
-    // If standing right below or on the Nexus door
-    if (Math.abs(centerCol - NEXUS_DOOR.col) <= 1 && Math.abs(centerRow - NEXUS_DOOR.row) <= 1) {
+    const b = NEXUS_DOOR_BOX;
+
+    // AABB check
+    if (
+      right > b.x &&
+      left < b.x + b.w &&
+      bottom > b.y &&
+      top < b.y + b.h
+    ) {
       if (this.onInteract) {
         this.onInteract();
       }
