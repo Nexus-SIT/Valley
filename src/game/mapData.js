@@ -43,11 +43,14 @@ export const REGIONS = [
   { type: 'tree', x: 1500, y: 0, w: 500, h: 400, color: '#27521c', solid: true },
   // Dense forest far right
   { type: 'tree', x: 1800, y: 400, w: 200, h: 1600, color: '#27521c', solid: true },
+
+  // --- BARRIERS (Coming Soon) ---
+  { type: 'barrier', x: 250, y: 650, w: 1550, h: 60, color: '#222', solid: true, label: '🚧 REST OF CAMPUS COMING SOON 🚧' },
 ];
 
-// Spawn point (bottom left on the dirt path)
-export const SPAWN_X = 320;
-export const SPAWN_Y = 1800;
+// Spawn point (Right in front of Nexus)
+export const SPAWN_X = 940;
+export const SPAWN_Y = 560;
 
 // Nexus Interaction Box (Front doors of the Pharmacy building)
 // The building is at x: 450, y: 100, w: 1000, h: 400

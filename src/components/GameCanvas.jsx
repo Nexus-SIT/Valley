@@ -75,6 +75,18 @@ const GameCanvas = ({ onNexusInteract }) => {
         ctx.lineWidth = 2;
         ctx.strokeRect(region.x, region.y, region.w, region.h);
       }
+
+      // Draw label for barrier
+      if (region.type === 'barrier' && region.label) {
+        ctx.fillStyle = '#ffcc00';
+        ctx.font = 'bold 18px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        // Draw the text multiple times across the barrier
+        for(let tx = region.x + 200; tx < region.x + region.w; tx += 400) {
+           ctx.fillText(region.label, tx, region.y + region.h / 2);
+        }
+      }
     }
 
     // Draw grid lines to emphasize scale
