@@ -114,7 +114,15 @@ const GameCanvas = ({ onNexusInteract }) => {
 
     // 3. Draw Player
     if (playerImgRef.current && playerImgRef.current.complete && playerImgRef.current.naturalWidth > 0) {
-      ctx.drawImage(playerImgRef.current, player.x, player.y, player.width, player.height);
+      const imgW = playerImgRef.current.naturalWidth;
+      const imgH = playerImgRef.current.naturalHeight;
+      
+      // Draw preserving exact aspect ratio and native size.
+      // Align bottom-center of the image with the bottom-center of the collision box.
+      const drawX = player.x + (player.width - imgW) / 2;
+      const drawY = player.y + (player.height - imgH);
+
+      ctx.drawImage(playerImgRef.current, drawX, drawY, imgW, imgH);
     } else {
       ctx.fillStyle = player.color;
       ctx.fillRect(player.x, player.y, player.width, player.height);
