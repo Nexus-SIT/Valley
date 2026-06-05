@@ -9,8 +9,13 @@ const GameCanvas = ({ onNexusInteract }) => {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
   const reqRef = useRef(null);
+  const playerImgRef = useRef(null);
 
   useEffect(() => {
+    // Initialize image
+    playerImgRef.current = new Image();
+    playerImgRef.current.src = '/characters/main/manish.png';
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
 
@@ -106,12 +111,16 @@ const GameCanvas = ({ onNexusInteract }) => {
     ctx.strokeRect(NEXUS_DOOR_BOX.x, NEXUS_DOOR_BOX.y, NEXUS_DOOR_BOX.w, NEXUS_DOOR_BOX.h);
 
     // 3. Draw Player
-    ctx.fillStyle = player.color;
-    ctx.fillRect(player.x, player.y, player.width, player.height);
-    // Draw tiny eyes to indicate facing/direction (static for now)
-    ctx.fillStyle = '#000';
-    ctx.fillRect(player.x + 3, player.y + 4, 2, 2);
-    ctx.fillRect(player.x + 11, player.y + 4, 2, 2);
+    if (playerImgRef.current && playerImgRef.current.complete && playerImgRef.current.naturalWidth > 0) {
+      ctx.drawImage(playerImgRef.current, player.x, player.y, player.width, player.height);
+    } else {
+      ctx.fillStyle = player.color;
+      ctx.fillRect(player.x, player.y, player.width, player.height);
+      // Draw tiny eyes to indicate facing/direction (static for now)
+      ctx.fillStyle = '#000';
+      ctx.fillRect(player.x + 3, player.y + 4, 2, 2);
+      ctx.fillRect(player.x + 11, player.y + 4, 2, 2);
+    }
 
     ctx.restore(); // Restore context to screen coordinates
 
