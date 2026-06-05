@@ -3,7 +3,7 @@ import { REGIONS, MAP_WIDTH, MAP_HEIGHT, NEXUS_DOOR_BOX, SIGN_BOX } from './mapD
 // Tiny player size to match map scale
 export const PLAYER_WIDTH = 16;
 export const PLAYER_HEIGHT = 24;
-export const PLAYER_SPEED = 4;
+export const PLAYER_SPEED = 2;
 
 export class GameEngine {
   constructor(startX, startY, onInteract) {
