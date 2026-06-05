@@ -8,9 +8,13 @@ const GameCanvas = ({ onInteract }) => {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
   const reqRef = useRef(null);
+  
+  // Directions map to row indices 1, 2, 3, 4
   const playerImagesRef = useRef({
-    idle: null,
-    walk: []
+    down: [],
+    up: [],
+    left: [],
+    right: []
   });
   const [dimensions, setDimensions] = useState({ w: window.innerWidth, h: window.innerHeight });
 
@@ -21,17 +25,25 @@ const GameCanvas = ({ onInteract }) => {
   }, []);
 
   useEffect(() => {
-    // Initialize images
-    const idleImg = new Image();
-    idleImg.src = '/characters/main/manish.png';
-    playerImagesRef.current.idle = idleImg;
-
-    playerImagesRef.current.walk = [];
-    for (let i = 1; i <= 4; i++) {
-      const walkImg = new Image();
-      walkImg.src = `/characters/main/walk${i}.png`;
-      playerImagesRef.current.walk.push(walkImg);
-    }
+    // Initialize directional images
+    // Row 1: down, Row 2: up, Row 3: left, Row 4: right
+    const dirMap = ['down', 'up', 'left', 'right'];
+    
+    dirMap.forEach((dir, rowIndex) => {
+      playerImagesRef.current[dir] = [];
+      for (let colIndex = 1; colIndex <= 4; colIndex++) {
+        const img = new Image();
+        img.src = `/characters/main/${rowIndex + 1}.${colIndex}.png`;
+        // Fallback to manish.png if the file doesn't exist yet so the game doesn't break
+        img.onerror = () => {
+          if (!img.fallbackAttempted) {
+            img.fallbackAttempted = true;
+            img.src = '/characters/main/manish.png';
+          }
+        };
+        playerImagesRef.current[dir].push(img);
+      }
+    });
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -150,9 +162,11 @@ const GameCanvas = ({ onInteract }) => {
     ctx.strokeRect(SIGN_BOX.x, SIGN_BOX.y, SIGN_BOX.w, SIGN_BOX.h);
 
     // 3. Draw Player
-    let currentImg = playerImagesRef.current.idle;
-    if (player.isMoving && playerImagesRef.current.walk.length === 4) {
-      currentImg = playerImagesRef.current.walk[player.animFrame];
+    const dirFrames = playerImagesRef.current[player.direction];
+    let currentImg = dirFrames && dirFrames.length > 0 ? dirFrames[0] : null; // Default to STAND frame
+    
+    if (player.isMoving && dirFrames && dirFrames.length === 4) {
+      currentImg = dirFrames[player.animFrame];
     }
 
     if (currentImg && currentImg.complete && currentImg.naturalWidth > 0) {

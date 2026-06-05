@@ -14,6 +14,7 @@ export class GameEngine {
       height: PLAYER_HEIGHT,
       color: '#ffeb3b', // simple yellow player
       isMoving: false,
+      direction: 'down', // 'down', 'up', 'left', 'right'
       animFrame: 0,
       animTimer: 0,
     };
@@ -65,6 +66,14 @@ export class GameEngine {
 
     if (dx !== 0 || dy !== 0) {
       this.movePlayer(dx, dy);
+      
+      // Update direction based on primary movement axis
+      if (Math.abs(dx) > Math.abs(dy)) {
+        this.player.direction = dx > 0 ? 'right' : 'left';
+      } else {
+        this.player.direction = dy > 0 ? 'down' : 'up';
+      }
+
       this.player.isMoving = true;
       this.player.animTimer++;
       if (this.player.animTimer >= 8) { // 8 ticks per frame
@@ -74,7 +83,7 @@ export class GameEngine {
     } else {
       this.player.isMoving = false;
       this.player.animTimer = 0;
-      this.player.animFrame = 0;
+      this.player.animFrame = 0; // Reset to 'STAND' frame
     }
   };
 
