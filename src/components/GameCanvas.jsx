@@ -1,9 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine } from '../game/engine';
 import { REGIONS, MAP_WIDTH, MAP_HEIGHT, SPAWN_X, SPAWN_Y, NEXUS_DOOR_BOX } from '../game/mapData';
 
-const VIEWPORT_W = 800;
-const VIEWPORT_H = 600;
 const ZOOM = 4; // Zoom factor to make character visible
 
 const GameCanvas = ({ onNexusInteract }) => {
@@ -11,6 +9,13 @@ const GameCanvas = ({ onNexusInteract }) => {
   const engineRef = useRef(null);
   const reqRef = useRef(null);
   const playerImgRef = useRef(null);
+  const [dimensions, setDimensions] = useState({ w: window.innerWidth, h: window.innerHeight });
+
+  useEffect(() => {
+    const handleResize = () => setDimensions({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     // Initialize image
@@ -44,6 +49,9 @@ const GameCanvas = ({ onNexusInteract }) => {
   }, [onNexusInteract]);
 
   const render = (ctx, player) => {
+    const VIEWPORT_W = window.innerWidth;
+    const VIEWPORT_H = window.innerHeight;
+
     // Calculate Camera Position (centered on player, accounting for zoom)
     let camX = player.x + player.width / 2 - (VIEWPORT_W / ZOOM) / 2;
     let camY = player.y + player.height / 2 - (VIEWPORT_H / ZOOM) / 2;
@@ -66,9 +74,9 @@ const GameCanvas = ({ onNexusInteract }) => {
       // Basic culling: don't draw if outside viewport
       if (
         region.x + region.w < camX ||
-        region.x > camX + VIEWPORT_W ||
+        region.x > camX + (VIEWPORT_W / ZOOM) ||
         region.y + region.h < camY ||
-        region.y > camY + VIEWPORT_H
+        region.y > camY + (VIEWPORT_H / ZOOM)
       ) {
         continue; // skip
       }
@@ -149,15 +157,15 @@ const GameCanvas = ({ onNexusInteract }) => {
   };
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
+    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'hidden' }}>
       <canvas
         ref={canvasRef}
-        width={VIEWPORT_W}
-        height={VIEWPORT_H}
+        width={dimensions.w}
+        height={dimensions.h}
         style={{
-          border: '4px solid #333',
-          borderRadius: '8px',
-          boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+          display: 'block',
+          width: '100%',
+          height: '100%',
           imageRendering: 'pixelated', // crisp look
         }}
       />
