@@ -46,6 +46,9 @@ export const REGIONS = [
 
   // --- BARRIERS (Coming Soon) ---
   { type: 'barrier', x: 250, y: 650, w: 1550, h: 60, color: '#222', solid: true, label: '🚧 REST OF CAMPUS COMING SOON 🚧' },
+
+  // --- INTERACTIVE OBJECTS ---
+  { type: 'sign', id: 'github_sign', x: 880, y: 560, w: 20, h: 20, color: '#8b5a2b', solid: true }
 ];
 
 // Spawn point (Right in front of Nexus)
@@ -60,4 +63,12 @@ export const NEXUS_DOOR_BOX = {
   y: 490,
   w: 100,
   h: 50
+};
+
+// GitHub Sign Interaction Box
+export const SIGN_BOX = {
+  x: 870,
+  y: 550,
+  w: 40,
+  h: 40
 };

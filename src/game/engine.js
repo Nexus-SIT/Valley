@@ -1,4 +1,4 @@
-import { REGIONS, MAP_WIDTH, MAP_HEIGHT, NEXUS_DOOR_BOX } from './mapData';
+import { REGIONS, MAP_WIDTH, MAP_HEIGHT, NEXUS_DOOR_BOX, SIGN_BOX } from './mapData';
 
 // Tiny player size to match map scale
 export const PLAYER_WIDTH = 16;
@@ -109,24 +109,24 @@ export class GameEngine {
   };
 
   checkInteraction = () => {
-    // Check intersection with Nexus door box
     const left = this.player.x;
     const right = this.player.x + this.player.width;
     const top = this.player.y;
     const bottom = this.player.y + this.player.height;
 
-    const b = NEXUS_DOOR_BOX;
+    const isIntersecting = (b) => {
+      return (
+        right > b.x &&
+        left < b.x + b.w &&
+        bottom > b.y &&
+        top < b.y + b.h
+      );
+    };
 
-    // AABB check
-    if (
-      right > b.x &&
-      left < b.x + b.w &&
-      bottom > b.y &&
-      top < b.y + b.h
-    ) {
-      if (this.onInteract) {
-        this.onInteract();
-      }
+    if (isIntersecting(NEXUS_DOOR_BOX)) {
+      if (this.onInteract) this.onInteract('nexus');
+    } else if (isIntersecting(SIGN_BOX)) {
+      if (this.onInteract) this.onInteract('github_sign');
     }
   };
 }

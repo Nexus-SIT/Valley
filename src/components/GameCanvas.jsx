@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine } from '../game/engine';
-import { REGIONS, MAP_WIDTH, MAP_HEIGHT, SPAWN_X, SPAWN_Y, NEXUS_DOOR_BOX } from '../game/mapData';
+import { REGIONS, MAP_WIDTH, MAP_HEIGHT, SPAWN_X, SPAWN_Y, NEXUS_DOOR_BOX, SIGN_BOX } from '../game/mapData';
 
 const ZOOM = 4; // Zoom factor to make character visible
 
-const GameCanvas = ({ onNexusInteract }) => {
+const GameCanvas = ({ onInteract }) => {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
   const reqRef = useRef(null);
@@ -26,7 +26,7 @@ const GameCanvas = ({ onNexusInteract }) => {
     const ctx = canvas.getContext('2d');
 
     // Initialize engine
-    engineRef.current = new GameEngine(SPAWN_X, SPAWN_Y, onNexusInteract);
+    engineRef.current = new GameEngine(SPAWN_X, SPAWN_Y, onInteract);
 
     // Event listeners
     window.addEventListener('keydown', engineRef.current.handleKeyDown);
@@ -46,7 +46,7 @@ const GameCanvas = ({ onNexusInteract }) => {
       window.removeEventListener('keyup', engineRef.current.handleKeyUp);
       cancelAnimationFrame(reqRef.current);
     };
-  }, [onNexusInteract]);
+  }, [onInteract]);
 
   const render = (ctx, player) => {
     const VIEWPORT_W = window.innerWidth;
@@ -79,6 +79,19 @@ const GameCanvas = ({ onNexusInteract }) => {
         region.y > camY + (VIEWPORT_H / ZOOM)
       ) {
         continue; // skip
+      }
+
+      if (region.type === 'sign') {
+        // Draw sign post
+        ctx.fillStyle = '#5c4033'; // darker brown post
+        ctx.fillRect(region.x + region.w / 2 - 2, region.y + 10, 4, 10);
+        // Draw sign board
+        ctx.fillStyle = region.color;
+        ctx.fillRect(region.x, region.y, region.w, 15);
+        ctx.strokeStyle = '#3d2b1f';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(region.x, region.y, region.w, 15);
+        continue;
       }
 
       ctx.fillStyle = region.color;
@@ -114,11 +127,16 @@ const GameCanvas = ({ onNexusInteract }) => {
       ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(MAP_WIDTH, i); ctx.stroke();
     }
 
-    // 2. Draw Interaction Box (visual aid)
+    // 2. Draw Interaction Boxes (visual aid)
     ctx.fillStyle = 'rgba(0, 255, 255, 0.2)';
     ctx.fillRect(NEXUS_DOOR_BOX.x, NEXUS_DOOR_BOX.y, NEXUS_DOOR_BOX.w, NEXUS_DOOR_BOX.h);
     ctx.strokeStyle = '#0ff';
     ctx.strokeRect(NEXUS_DOOR_BOX.x, NEXUS_DOOR_BOX.y, NEXUS_DOOR_BOX.w, NEXUS_DOOR_BOX.h);
+
+    ctx.fillStyle = 'rgba(0, 255, 255, 0.2)';
+    ctx.fillRect(SIGN_BOX.x, SIGN_BOX.y, SIGN_BOX.w, SIGN_BOX.h);
+    ctx.strokeStyle = '#0ff';
+    ctx.strokeRect(SIGN_BOX.x, SIGN_BOX.y, SIGN_BOX.w, SIGN_BOX.h);
 
     // 3. Draw Player
     if (playerImgRef.current && playerImgRef.current.complete && playerImgRef.current.naturalWidth > 0) {

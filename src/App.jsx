@@ -2,21 +2,22 @@ import { useState } from 'react';
 import GameCanvas from './components/GameCanvas';
 import NexusModal from './components/NexusModal';
 import SplashScreen from './components/SplashScreen';
+import GithubModal from './components/GithubModal';
 import './App.css'; // Optional if you have app specific styles
 
 function App() {
-  const [showModal, setShowModal] = useState(false);
+  const [activeModal, setActiveModal] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
 
-  const handleNexusInteract = () => {
+  const handleInteract = (type) => {
     // Prevent multiple triggers
-    if (!showModal) {
-      setShowModal(true);
+    if (!activeModal) {
+      setActiveModal(type);
     }
   };
 
   const closeModal = () => {
-    setShowModal(false);
+    setActiveModal(null);
   };
 
   return (
@@ -24,8 +25,9 @@ function App() {
       {!isPlaying && <SplashScreen onPlay={() => setIsPlaying(true)} />}
       {isPlaying && (
         <>
-          <GameCanvas onNexusInteract={handleNexusInteract} />
-          {showModal && <NexusModal onClose={closeModal} />}
+          <GameCanvas onInteract={handleInteract} />
+          {activeModal === 'nexus' && <NexusModal onClose={closeModal} />}
+          {activeModal === 'github_sign' && <GithubModal onClose={closeModal} />}
         </>
       )}
     </div>
