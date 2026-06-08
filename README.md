@@ -1,16 +1,38 @@
-# React + Vite
+# Valley
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Valley is a 2D web-based exploration game built with React, Vite, and HTML5 Canvas.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Custom Game Engine:** A lightweight, custom-built 2D game engine handling movement, collision detection, and rendering on an HTML5 `<canvas>`.
+- **Top-Down Exploration:** Explore the valley, interact with signs, and discover the Nexus building.
+- **Pixel-Art Aesthetic:** Pixelated rendering with camera zoom for a retro, RPG-like feel.
+- **Responsive Camera:** The camera automatically centers on the player and clamps to map boundaries.
 
-## React Compiler
+## Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- [React](https://react.dev/) - UI and component state management.
+- [Vite](https://vitejs.dev/) - Lightning-fast build tool and development server.
+- HTML5 Canvas API - High-performance 2D rendering.
 
-## Expanding the ESLint configuration
+## Getting Started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Run the development server:**
+   ```bash
+   npm run dev
+   ```
+
+3. **Build for production:**
+   ```bash
+   npm run build
+   ```
+
+## Controls
+
+- **WASD / Arrow Keys:** Move the character.
+- **E / Space:** Interact with objects (e.g., Nexus Door, Signs).
