@@ -45,15 +45,15 @@ export const REGIONS = [
   { type: 'tree', x: 1800, y: 400, w: 200, h: 1600, color: '#27521c', solid: true },
 
   // --- BARRIERS (Coming Soon) ---
-  { type: 'barrier', x: 250, y: 650, w: 1550, h: 60, color: '#222', solid: true, label: '🚧 REST OF CAMPUS COMING SOON 🚧' },
+  { type: 'barrier', x: 250, y: 650, w: 1550, h: 60, color: '#222', solid: false, label: '🚧 REST OF CAMPUS COMING SOON 🚧' },
 
   // --- INTERACTIVE OBJECTS ---
   { type: 'sign', id: 'github_sign', x: 880, y: 560, w: 20, h: 20, color: '#8b5a2b', solid: true }
 ];
 
-// Spawn point (Right in front of Nexus)
-export const SPAWN_X = 940;
-export const SPAWN_Y = 560;
+// Spawn point (At Building 1: Administrative Block)
+export const SPAWN_X = 300;
+export const SPAWN_Y = 950;
 
 // Nexus Interaction Box (Front doors of the Pharmacy building)
 // The building is at x: 450, y: 100, w: 1000, h: 400

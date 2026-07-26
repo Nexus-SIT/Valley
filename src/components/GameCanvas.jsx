@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine } from '../game/engine';
 import { REGIONS, MAP_WIDTH, MAP_HEIGHT, SPAWN_X, SPAWN_Y, NEXUS_DOOR_BOX, SIGN_BOX } from '../game/mapData';
+import MapOverlay from './MapOverlay';
 
 const ZOOM = 4; // Zoom factor to make character visible
 
@@ -17,6 +18,7 @@ const GameCanvas = ({ onInteract }) => {
     right: []
   });
   const [dimensions, setDimensions] = useState({ w: window.innerWidth, h: window.innerHeight });
+  const [playerPos, setPlayerPos] = useState({ x: SPAWN_X, y: SPAWN_Y });
 
   useEffect(() => {
     const handleResize = () => setDimensions({ w: window.innerWidth, h: window.innerHeight });
@@ -59,6 +61,13 @@ const GameCanvas = ({ onInteract }) => {
     const loop = () => {
       engineRef.current.update();
       render(ctx, engineRef.current.player);
+      
+      // Update coordinates in React state for the map overlay in real time
+      setPlayerPos({
+        x: Math.round(engineRef.current.player.x),
+        y: Math.round(engineRef.current.player.y)
+      });
+      
       reqRef.current = requestAnimationFrame(loop);
     };
 
@@ -217,6 +226,7 @@ const GameCanvas = ({ onInteract }) => {
           imageRendering: 'pixelated', // crisp look
         }}
       />
+      <MapOverlay playerPos={playerPos} />
     </div>
   );
 };
