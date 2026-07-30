@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 
 const MAP_SIZE = 2000;
 
-// Coordinate calibration: maps character game coordinates (0-2000) to visual paths in campus_map.png
+// Coordinate calibration: maps character game coordinates (0-2000) to visual paths in campus_map.jpeg
 const mapCoordinates = (x, y) => {
-  let rx = x;
-  let ry = y;
+  let rx;
+  let ry;
 
   // X Coordinate Calibration
   if (x <= 300) {
@@ -37,25 +37,26 @@ const mapCoordinates = (x, y) => {
 // List of all 20 buildings with custom coordinates matching their locations in campus_map.png
 const BUILDINGS = [
   { id: 1, name: 'Administrative block', desc: 'The central administrative office and reception headquarters.', x: 330, y: 970, w: 180, h: 720, shape: 'rect' },
-  { id: 2, name: 'Academic block I', desc: 'Main academic building housing large lecture halls and faculty chambers.', x: 140, y: 970, w: 190, h: 510, shape: 'rect' },
-  { id: 3, name: 'Srinivas institute of nursing sciences', desc: 'State-of-the-art training labs and classrooms for nursing education.', x: 440, y: 1720, w: 500, h: 160, shape: 'rect' },
-  { id: 4, name: 'Srinivas college of pharmacy (NEXUS)', desc: 'Interactive classrooms and research labs for pharmaceutical sciences. This building houses the NEXUS Headquarters. Walk to the entrance and press SPACE or E in the game to access the central terminal.', x: 140, y: 760, w: 860, h: 180, shape: 'rect' },
-  { id: 5, name: 'Academic block IV', desc: 'Advanced lecture halls and specialized research departments.', x: 1110, y: 950, w: 240, h: 170, shape: 'rect' },
-  { id: 6, name: 'Academic block II', desc: 'Computing facilities, main server room, and software labs.', x: 140, y: 190, w: 340, h: 440, shape: 'rect' },
-  { id: 7, name: 'Academic block III', desc: 'Large lecture halls, seminar rooms, and open courtyard.', x: 610, y: 320, w: 340, h: 320, shape: 'rect' },
-  { id: 8, name: 'Mechanical work shop', desc: 'Heavy machinery, casting, and machining workshops.', x: 950, y: 980, w: 90, h: 440, shape: 'rect' },
+  { id: 2, name: 'Academic block I', desc: 'Main academic building housing large lecture halls and faculty chambers.', x: 140, y: 968, w: 190, h: 510, shape: 'rect' },
+  { id: 3, name: 'Srinivas institute of nursing sciences', desc: 'State-of-the-art training labs and classrooms for nursing education.', x: 439, y: 1717, w: 500, h: 160, shape: 'rect' },
+  { id: 4, name: 'Srinivas college of pharmacy (NEXUS)', desc: 'Interactive classrooms and research labs for pharmaceutical sciences. This building houses the NEXUS Headquarters. Walk to the entrance and press SPACE or E in the game to access the central terminal.', x: 139, y: 759, w: 860, h: 180, shape: 'rect' },
+  { id: 5, name: 'Academic block IV', desc: 'Advanced lecture halls and specialized research departments.', x: 1107, y: 948, w: 240, h: 170, shape: 'rect' },
+  { id: 6, name: 'Academic block II', desc: 'Computing facilities, main server room, and software labs.', x: 250, y: 190, w: 120, h: 440, shape: 'rect' },
+  { id: 7, name: 'Academic block III', desc: 'Large lecture halls, seminar rooms, and open courtyard.', x: 609, y: 319, w: 340, h: 320, shape: 'rect' },
+  { id: 8, name: 'Mechanical work shop', desc: 'Heavy machinery, casting, and machining workshops.', x: 949, y: 978, w: 90, h: 440, shape: 'rect' },
   { id: 9, name: 'Automobile lab', desc: 'Hands-on practical workshop featuring engine assemblies and chassis testing.', x: 1830, y: 410, w: 100, h: 220, shape: 'rect' },
-  { id: 10, name: 'Boys hostel', desc: 'Residential halls, dining mess, and lounges for male students.', x: 1450, y: 340, w: 380, h: 540, shape: 'rect' },
-  { id: 11, name: 'Girls hostel', desc: 'Secure residential block with modern amenities and gardens for female students.', x: 140, y: 190, w: 340, h: 440, shape: 'rect' },
-  { id: 12, name: 'Meditation center', desc: 'A quiet, peaceful pavilion designated for yoga and mindfulness.', x: 600, y: 700, w: 110, h: 100, shape: 'rect' },
-  { id: 13, name: 'Priest quarters', desc: 'Living quarters for the temple priests and maintenance staff.', x: 1010, y: 1800, w: 70, h: 100, shape: 'rect' },
+  { id: 10, name: 'Boys hostel', desc: 'Residential halls, dining mess, and lounges for male students.', x: 1451, y: 340, w: 380, h: 540, shape: 'rect' },
+  { id: 11, name: 'Girls hostel', desc: 'Secure residential block with modern amenities and gardens for female students.', x: 120, y: 460, w: 120, h: 120, shape: 'rect' },
+  { id: 12, name: 'Meditation center', desc: 'A quiet, peaceful pavilion designated for yoga and mindfulness.', x: 601, y: 700, w: 110, h: 100, shape: 'rect' },
+  { id: 13, name: 'Priest quarters', desc: 'Living quarters for the temple priests and maintenance staff.', x: 1010, y: 1799, w: 70, h: 100, shape: 'rect' },
   { id: 14, name: 'Srinivasa temple', desc: 'Traditional temple offering a spiritual haven and cultural center on campus.', x: 750, y: 700, w: 110, h: 100, shape: 'rect' },
   { id: 15, name: 'ATM', desc: '24/7 banking kiosk for cash withdrawals and basic banking services.', x: 950, y: 760, w: 60, h: 60, shape: 'rect' },
-  { id: 16, name: 'College ground', desc: 'Large athletic turf with a standard running track and football field.', cx: 1460, cy: 1540, rx: 380, ry: 220, shape: 'oval' },
-  { id: 17, name: 'Post office', desc: 'Local post branch for campus mailing, packages, and logistics.', x: 180, y: 1510, w: 160, h: 100, shape: 'rect' },
-  { id: 18, name: 'Generator room', desc: 'High-capacity generator facility supplying uninterrupted backup power.', x: 1840, y: 200, w: 100, h: 100, shape: 'rect' },
+  { id: 16, name: 'College ground', desc: 'Large athletic turf with a standard running track and football field.', cx: 1459, cy: 1540, rx: 380, ry: 220, shape: 'oval' },
+  { id: 17, name: 'Post office', desc: 'Local post branch for campus mailing, packages, and logistics.', x: 180, y: 1509, w: 160, h: 100, shape: 'rect' },
+  { id: 18, name: 'Generator room', desc: 'High-capacity generator facility supplying uninterrupted backup power.', x: 1839, y: 200, w: 100, h: 100, shape: 'rect' },
   { id: 19, name: 'Parking area', desc: 'Spacious vehicle parking slots for students, staff, and visitors.', x: 1140, y: 600, w: 220, h: 210, shape: 'rect' },
-  { id: 20, name: 'Sewage treatment plant', desc: 'Eco-friendly water processing unit ensuring sustainable campus waste management.', x: 1030, y: 150, w: 140, h: 150, shape: 'rect' }
+  { id: 20, name: 'Sewage treatment plant', desc: 'Eco-friendly water processing unit ensuring sustainable campus waste management.', x: 1034, y: 159, w: 140, h: 150, shape: 'rect' },
+  { id: 21, name: 'Garden', desc: 'A beautifully landscaped garden area providing a serene green environment at the heart of the campus, ideal for relaxation and outdoor study.', x: 510, y: 920, w: 420, h: 180, shape: 'rect' }
 ];
 
 const MapOverlay = ({ playerPos }) => {
@@ -137,7 +138,7 @@ const MapOverlay = ({ playerPos }) => {
   };
 
   // Render building number badges at their centers
-  const renderBuildingNumber = (b) => {
+  const renderBuildingNumber = (b, isInteractive) => {
     let textX = b.x + b.w / 2;
     let textY = b.y + b.h / 2 + 5;
     
@@ -146,9 +147,35 @@ const MapOverlay = ({ playerPos }) => {
       textY = b.cy + 5;
     }
 
+    const isSelected = selectedBuilding?.id === b.id;
+
     return (
-      <g key={`num-${b.id}`} style={{ pointerEvents: 'none' }}>
-        <circle cx={textX} cy={textY - 5} r={13} fill="rgba(0, 0, 0, 0.75)" stroke="#fff" strokeWidth={1} />
+      <g 
+        key={`num-${b.id}`} 
+        style={isInteractive ? { cursor: 'pointer' } : { pointerEvents: 'none' }}
+        onClick={isInteractive ? () => {
+          setSelectedBuilding(b);
+          setActiveTab('inspect');
+        } : undefined}
+      >
+        {/* Invisible larger click target circle to make clicking extremely easy */}
+        {isInteractive && (
+          <circle 
+            cx={textX} 
+            cy={textY - 5} 
+            r={24} 
+            fill="transparent" 
+          />
+        )}
+        <circle 
+          cx={textX} 
+          cy={textY - 5} 
+          r={13} 
+          fill={isSelected ? '#ff3366' : 'rgba(0, 0, 0, 0.75)'} 
+          stroke="#fff" 
+          strokeWidth={isSelected ? 2 : 1} 
+          style={{ transition: 'fill 0.2s, stroke-width 0.2s' }}
+        />
         <text
           x={textX}
           y={textY - 1}
@@ -175,9 +202,41 @@ const MapOverlay = ({ playerPos }) => {
         {BUILDINGS.map(b => renderBuildingHotspot(b, isInteractive))}
 
         {/* 3. Number Labels */}
-        {BUILDINGS.map(b => renderBuildingNumber(b))}
+        {BUILDINGS.map(b => renderBuildingNumber(b, isInteractive))}
 
-        {/* 4. Calibrated Player Character Marker */}
+        {/* 4. Pinpoint Marker for Selected Building */}
+        {isInteractive && selectedBuilding && (
+          (() => {
+            let pinX = selectedBuilding.x + selectedBuilding.w / 2;
+            let pinY = selectedBuilding.y + selectedBuilding.h / 2;
+            if (selectedBuilding.shape === 'oval') {
+              pinX = selectedBuilding.cx;
+              pinY = selectedBuilding.cy;
+            }
+            return (
+              <g key="selected-pin" style={{ pointerEvents: 'none' }}>
+                {/* Pulsating outer ring */}
+                <circle cx={pinX} cy={pinY} r={16} fill="none" stroke="#ff3366" strokeWidth={3} className="pulsing-ring" />
+                {/* Inner pin shadow */}
+                <ellipse cx={pinX} cy={pinY + 2} rx={6} ry={2} fill="rgba(0,0,0,0.3)" />
+                {/* Bouncing Pin Group */}
+                <g className="bouncing-pin">
+                  {/* Teardrop Pin Marker */}
+                  <path
+                    d={`M ${pinX} ${pinY} C ${pinX - 10} ${pinY - 10} ${pinX - 10} ${pinY - 26} ${pinX} ${pinY - 26} C ${pinX + 10} ${pinY - 26} ${pinX + 10} ${pinY - 10} ${pinX} ${pinY} Z`}
+                    fill="#ff3366"
+                    stroke="#fff"
+                    strokeWidth={1.5}
+                  />
+                  {/* Dot inside the pin */}
+                  <circle cx={pinX} cy={pinY - 17} r={3.5} fill="#fff" />
+                </g>
+              </g>
+            );
+          })()
+        )}
+
+        {/* 5. Calibrated Player Character Marker */}
         {calibratedPos && (
           <g key="player-marker">
             <circle cx={calibratedPos.x} cy={calibratedPos.y} r={28} fill="#ffeb3b" opacity={0.35}>
@@ -240,14 +299,51 @@ const MapOverlay = ({ playerPos }) => {
 
             {/* Modal Main Area */}
             <div style={styles.modalBody}>
-              {/* Map SVG (Left) */}
+              {/* Map (Left) — <img> for reliable display + SVG overlay for interactivity */}
               <div style={styles.mapContainer}>
-                <svg 
-                  viewBox={`0 0 ${MAP_SIZE} ${MAP_SIZE}`}
-                  style={styles.fullMapSvg}
-                >
-                  {renderSvgContent(true)}
-                </svg>
+                <div style={styles.mapInner}>
+                  {/* Background map image */}
+                  <img
+                    src="/campus_map.png"
+                    alt="SIT Valachil Campus Map"
+                    style={styles.mapImage}
+                    draggable={false}
+                  />
+                  {/* Interactive SVG overlay – hotspots, badges, pin, player */}
+                  <svg
+                    viewBox={`0 0 ${MAP_SIZE} ${MAP_SIZE}`}
+                    preserveAspectRatio="none"
+                    style={styles.mapSvgOverlay}
+                  >
+                    {BUILDINGS.map(b => renderBuildingHotspot(b, true))}
+                    {BUILDINGS.map(b => renderBuildingNumber(b, true))}
+                    {selectedBuilding && (() => {
+                      const pinX = selectedBuilding.shape === 'oval' ? selectedBuilding.cx : selectedBuilding.x + selectedBuilding.w / 2;
+                      const pinY = selectedBuilding.shape === 'oval' ? selectedBuilding.cy : selectedBuilding.y + selectedBuilding.h / 2;
+                      return (
+                        <g key="selected-pin" style={{ pointerEvents: 'none' }}>
+                          <circle cx={pinX} cy={pinY} r={16} fill="none" stroke="#ff3366" strokeWidth={3} className="pulsing-ring" />
+                          <ellipse cx={pinX} cy={pinY + 2} rx={6} ry={2} fill="rgba(0,0,0,0.3)" />
+                          <g className="bouncing-pin">
+                            <path d={`M ${pinX} ${pinY} C ${pinX-10} ${pinY-10} ${pinX-10} ${pinY-26} ${pinX} ${pinY-26} C ${pinX+10} ${pinY-26} ${pinX+10} ${pinY-10} ${pinX} ${pinY} Z`} fill="#ff3366" stroke="#fff" strokeWidth={1.5} />
+                            <circle cx={pinX} cy={pinY - 17} r={3.5} fill="#fff" />
+                          </g>
+                        </g>
+                      );
+                    })()}
+                    {calibratedPos && (
+                      <g key="player-marker-full">
+                        <circle cx={calibratedPos.x} cy={calibratedPos.y} r={28} fill="#ffeb3b" opacity={0.35}>
+                          <animate attributeName="r" values="18;34;18" dur="2s" repeatCount="indefinite" />
+                          <animate attributeName="opacity" values="0.5;0.1;0.5" dur="2s" repeatCount="indefinite" />
+                        </circle>
+                        <circle cx={calibratedPos.x} cy={calibratedPos.y} r={10} fill="#f44336" stroke="#fff" strokeWidth={2.5} />
+                        <polygon points={`${calibratedPos.x},${calibratedPos.y-18} ${calibratedPos.x-6},${calibratedPos.y-10} ${calibratedPos.x+6},${calibratedPos.y-10}`} fill="#f44336" stroke="#fff" strokeWidth={1} />
+                        <text x={calibratedPos.x} y={calibratedPos.y + 3} fill="#fff" fontSize="8" fontWeight="900" textAnchor="middle" fontFamily="'Inter', sans-serif">YOU</text>
+                      </g>
+                    )}
+                  </svg>
+                </div>
               </div>
 
               {/* Sidebar directory (Right) */}
@@ -535,20 +631,34 @@ const styles = {
   mapContainer: {
     flex: '1.4',
     background: '#151922',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
     overflow: 'hidden',
     padding: '16px',
-    position: 'relative'
+    position: 'relative',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'stretch'
   },
-  fullMapSvg: {
-    maxWidth: '100%',
-    maxHeight: '100%',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+  mapInner: {
+    position: 'relative',
+    flex: 1,
     borderRadius: '12px',
-    border: '1px solid rgba(255, 255, 255, 0.05)',
-    backgroundColor: '#151922'
+    overflow: 'hidden',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+    border: '1px solid rgba(255, 255, 255, 0.07)'
+  },
+  mapImage: {
+    display: 'block',
+    width: '100%',
+    height: '100%',
+    objectFit: 'fill',
+    userSelect: 'none'
+  },
+  mapSvgOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%'
   },
   sidebar: {
     flex: '0.8',
@@ -871,10 +981,25 @@ if (typeof document !== 'undefined') {
       from { opacity: 0; transform: translateY(8px); }
       to { opacity: 1; transform: translateY(0); }
     }
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    @keyframes pulse {
+      0% { r: 8px; opacity: 0.8; }
+      100% { r: 28px; opacity: 0; }
+    }
     .map-building-hotspot:hover {
       fill: rgba(96, 239, 255, 0.18) !important;
       stroke: #60efff !important;
       stroke-width: 3px !important;
+    }
+    .pulsing-ring {
+      animation: pulse 1.6s cubic-bezier(0.24, 0, 0.38, 1) infinite;
+      transform-origin: center;
+    }
+    .bouncing-pin {
+      animation: bounce 1.2s ease-in-out infinite;
     }
   `;
   document.head.appendChild(styleTag);

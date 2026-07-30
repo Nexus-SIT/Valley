@@ -34,7 +34,7 @@ export class GameEngine {
   }
 
   handleKeyDown = (e) => {
-    if (this.keys.hasOwnProperty(e.key)) {
+    if (Object.prototype.hasOwnProperty.call(this.keys, e.key)) {
       this.keys[e.key] = true;
     }
     if (e.key === 'e' || e.key === 'E' || e.key === ' ') {
@@ -43,7 +43,7 @@ export class GameEngine {
   };
 
   handleKeyUp = (e) => {
-    if (this.keys.hasOwnProperty(e.key)) {
+    if (Object.prototype.hasOwnProperty.call(this.keys, e.key)) {
       this.keys[e.key] = false;
     }
   };
