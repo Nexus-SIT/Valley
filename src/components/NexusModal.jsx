@@ -3,24 +3,33 @@ import React from 'react';
 const NexusModal = ({ onClose }) => {
   return (
     <div style={styles.overlay}>
-      <div style={styles.modal}>
+      <div className="dialogue-card" style={styles.modal}>
         <div style={styles.header}>
-          <h2 style={styles.title}>NEXUS Headquarters</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className="inventory-chip" style={{ backgroundColor: 'var(--accent-harvest)', color: '#fff' }}>[LOCATION]</span>
+            <h2 className="pixel-font" style={styles.title}>NEXUS HQ</h2>
+          </div>
           <button style={styles.closeButton} onClick={onClose}>&times;</button>
         </div>
         
         <div style={styles.content}>
-          <p style={styles.address}>
-            <strong>Internal Address:</strong> Sector 7G, Main Campus Grid
-          </p>
+          <div style={styles.address}>
+            <span className="pixel-font" style={{ fontSize: '9px', display: 'block', marginBottom: '4px' }}>INTERNAL ADDRESS:</span>
+            <strong>Sector 7G, Main Campus Grid</strong>
+          </div>
+
           <div style={styles.details}>
-            <p><strong>Status:</strong> Operational</p>
-            <p><strong>Access Level:</strong> Verified Player</p>
-            <p>Welcome to the core operations center. All systems are currently nominal. Please check in with the central terminal for your next assignment.</p>
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <span className="inventory-chip" style={{ backgroundColor: '#D1E7DD', color: 'var(--accent-forest)' }}>STATUS: OPERATIONAL</span>
+              <span className="inventory-chip">LEVEL 1 VERIFIED</span>
+            </div>
+            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+              Welcome to the core operations center. All systems are currently nominal. Please check in with the central terminal for your next campus assignment.
+            </p>
           </div>
           
-          <button style={styles.cta}>
-            Access Central Terminal
+          <button className="btn-primary" onClick={onClose} style={{ width: '100%', marginTop: '8px' }}>
+            ACCESS CENTRAL TERMINAL ➔
           </button>
         </div>
       </div>
@@ -35,26 +44,18 @@ const styles = {
     left: 0,
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(61, 40, 23, 0.4)',
+    backdropFilter: 'blur(4px)',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 10,
-    backdropFilter: 'blur(4px)',
-    animation: 'fadeIn 0.3s ease-out',
+    zIndex: 100,
   },
   modal: {
-    background: 'rgba(255, 255, 255, 0.1)',
-    backdropFilter: 'blur(16px)',
-    WebkitBackdropFilter: 'blur(16px)',
-    borderRadius: '16px',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    boxShadow: '0 4px 30px rgba(0, 0, 0, 0.3)',
-    width: '400px',
+    width: '420px',
     maxWidth: '90%',
     padding: '24px',
-    color: '#fff',
-    fontFamily: "'Inter', sans-serif",
+    color: 'var(--text-primary)',
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
@@ -63,59 +64,39 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+    borderBottom: '2px solid var(--border-box)',
     paddingBottom: '12px',
   },
   title: {
     margin: 0,
-    fontSize: '1.5rem',
-    fontWeight: 600,
-    letterSpacing: '1px',
-    fontFamily: "'Outfit', sans-serif",
-    background: 'linear-gradient(90deg, #60efff, #0061ff)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
+    fontSize: '1.1rem',
+    color: 'var(--text-primary)',
   },
   closeButton: {
     background: 'none',
     border: 'none',
-    color: 'rgba(255,255,255,0.7)',
+    color: 'var(--text-primary)',
     fontSize: '24px',
     cursor: 'pointer',
     padding: '0',
     lineHeight: 1,
-    transition: 'color 0.2s',
+    fontWeight: 'bold'
   },
   content: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
-    fontSize: '0.95rem',
-    lineHeight: 1.6,
+    gap: '14px',
   },
   address: {
-    margin: 0,
-    padding: '8px 12px',
-    background: 'rgba(0, 0, 0, 0.2)',
-    borderRadius: '8px',
-    borderLeft: '3px solid #60efff',
+    padding: '10px 14px',
+    backgroundColor: 'var(--bg-inventory)',
+    border: '1px solid var(--border-box)',
+    borderRadius: '4px',
   },
   details: {
-    color: 'rgba(255, 255, 255, 0.85)',
-  },
-  cta: {
-    marginTop: '8px',
-    padding: '12px 24px',
-    background: 'linear-gradient(90deg, #0061ff, #60efff)',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '1rem',
-    fontWeight: 600,
-    cursor: 'pointer',
-    transition: 'transform 0.2s, box-shadow 0.2s',
-    boxShadow: '0 4px 15px rgba(0, 97, 255, 0.4)',
+    lineHeight: 1.5,
   }
 };
 
 export default NexusModal;
+
