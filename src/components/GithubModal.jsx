@@ -18,7 +18,7 @@ const GithubModal = ({ onClose }) => {
             </p>
           </div>
           <a
-            href="https://github.com"
+            href="https://github.com/Nexus-SIT/Valley"
             target="_blank"
             rel="noopener noreferrer"
             className="btn-primary"
