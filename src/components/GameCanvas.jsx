@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GameEngine } from '../game/engine';
 import { REGIONS, MAP_WIDTH, MAP_HEIGHT, SPAWN_X, SPAWN_Y, NEXUS_DOOR_BOX, SIGN_BOX } from '../game/mapData';
 import MapOverlay from './MapOverlay';
@@ -80,7 +80,7 @@ const GameCanvas = ({ onInteract }) => {
     };
   }, [onInteract]);
 
-  const render = (ctx, player) => {
+  function render(ctx, player) {
     const VIEWPORT_W = window.innerWidth;
     const VIEWPORT_H = window.innerHeight;
 
@@ -211,7 +211,7 @@ const GameCanvas = ({ onInteract }) => {
     ctx.textAlign = 'left';
     ctx.fillText('WASD/Arrows to move', 20, 30);
     ctx.fillText('Find Nexus Building (Top) & Press SPACE', 20, 50);
-  };
+  }
 
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'hidden' }}>
