@@ -17,7 +17,7 @@ const BUILDINGS = [
     shape: 'polygon', 
     points: '416,1014 498,1014 498,1718 416,1718',
     x: 416, y: 1014, w: 82, h: 704, 
-    gameX: 350, gameY: 950 
+    pinX: 457, pinY: 1260, gameX: 350, gameY: 950 
   },
   { 
     id: 2, 
@@ -27,7 +27,7 @@ const BUILDINGS = [
     shape: 'polygon', 
     points: '262,1014 435,1014 435,1145 345,1145 345,1477 262,1477',
     x: 262, y: 1014, w: 173, h: 463,
-    gameX: 100, gameY: 1000 
+    pinX: 275, pinY: 1120, gameX: 100, gameY: 1000 
   },
   { 
     id: 3, 
@@ -37,7 +37,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '429,1678 849,1678 849,1875 429,1875',
     x: 429, y: 1678, w: 420, h: 197, 
-    gameX: 650, gameY: 1620 
+    pinX: 639, pinY: 1630, gameX: 650, gameY: 1620 
   },
   { 
     id: 4, 
@@ -47,7 +47,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '241,815 938,815 938,984 241,984',
     x: 241, y: 815, w: 697, h: 169, 
-    gameX: 550, gameY: 700, 
+    pinX: 300, pinY: 900, gameX: 550, gameY: 700, 
     isNexus: true 
   },
   { 
@@ -58,7 +58,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '1013,967 1172,967 1172,1086 1013,1086',
     x: 1013, y: 967, w: 159, h: 119, 
-    gameX: 950, gameY: 750 
+    pinX: 1092, pinY: 1026, gameX: 950, gameY: 750 
   },
   { 
     id: 6, 
@@ -68,7 +68,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '1180,317 1434,317 1434,802 1180,802',
     x: 1180, y: 317, w: 254, h: 485, 
-    gameX: 1100, gameY: 400 
+    pinX: 1307, pinY: 430, gameX: 1100, gameY: 400 
   },
   { 
     id: 7, 
@@ -78,7 +78,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '617,345 850,345 850,624 617,624',
     x: 617, y: 345, w: 233, h: 279, 
-    gameX: 560, gameY: 300 
+    pinX: 733, pinY: 484, gameX: 560, gameY: 300 
   },
   { 
     id: 8, 
@@ -88,7 +88,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '1201,948 1501,948 1501,1033 1201,1033',
     x: 1201, y: 948, w: 300, h: 85, 
-    gameX: 1350, gameY: 670 
+    pinX: 1351, pinY: 990, gameX: 1350, gameY: 670 
   },
   { 
     id: 9, 
@@ -98,7 +98,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '1462,398 1540,398 1540,607 1462,607',
     x: 1462, y: 398, w: 78, h: 209, 
-    gameX: 1420, gameY: 300 
+    pinX: 1501, pinY: 502, gameX: 1420, gameY: 300 
   },
   { 
     id: 10, 
@@ -108,7 +108,7 @@ const BUILDINGS = [
     shape: 'polygon', 
     points: '1680,664 1882,800 1740,1052 1586,916',
     x: 1586, y: 664, w: 296, h: 388,
-    gameX: 1500, gameY: 700 
+    pinX: 1734, pinY: 858, gameX: 1500, gameY: 700 
   },
   { 
     id: 11, 
@@ -118,7 +118,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '268,328 643,328 643,662 268,662',
     x: 268, y: 328, w: 375, h: 334, 
-    gameX: 540, gameY: 300 
+    pinX: 455, pinY: 495, gameX: 540, gameY: 300 
   },
   { 
     id: 12, 
@@ -128,7 +128,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '1006,902 1166,902 1166,927 1006,927',
     x: 1006, y: 902, w: 160, h: 25, 
-    gameX: 950, gameY: 620 
+    pinX: 1086, pinY: 850, gameX: 950, gameY: 620 
   },
   { 
     id: 13, 
@@ -138,7 +138,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '702,692 904,692 904,749 702,749',
     x: 702, y: 692, w: 202, h: 57, 
-    gameX: 600, gameY: 500 
+    pinX: 803, pinY: 720, gameX: 600, gameY: 500 
   },
   { 
     id: 14, 
@@ -148,7 +148,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '899,1005 970,1005 970,1460 899,1460',
     x: 899, y: 1005, w: 71, h: 455, 
-    gameX: 880, gameY: 1000 
+    pinX: 934, pinY: 1050, gameX: 880, gameY: 1000 
   },
   { 
     id: 15, 
@@ -158,7 +158,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '946,1754 1013,1754 1013,1896 946,1896',
     x: 946, y: 1754, w: 67, h: 142, 
-    gameX: 970, gameY: 1700 
+    pinX: 979, pinY: 1720, gameX: 970, gameY: 1700 
   },
   { 
     id: 16, 
@@ -167,7 +167,7 @@ const BUILDINGS = [
     desc: 'Large athletic turf with a standard running track and football field.', 
     cx: 1460, cy: 1540, rx: 390, ry: 240, 
     shape: 'oval', 
-    gameX: 1200, gameY: 1400 
+    pinX: 1460, pinY: 1370, gameX: 1200, gameY: 1400 
   },
   { 
     id: 17, 
@@ -177,7 +177,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '335,1810 416,1810 416,1915 335,1915',
     x: 335, y: 1810, w: 81, h: 105, 
-    gameX: 320, gameY: 1780 
+    pinX: 375, pinY: 1840, gameX: 320, gameY: 1780 
   },
   { 
     id: 18, 
@@ -187,7 +187,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '262,1725 349,1725 349,1839 262,1839',
     x: 262, y: 1725, w: 87, h: 114, 
-    gameX: 230, gameY: 1700 
+    pinX: 305, pinY: 1782, gameX: 230, gameY: 1700 
   },
   { 
     id: 19, 
@@ -197,7 +197,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '180,1510 270,1510 270,1640 180,1640',
     x: 180, y: 1510, w: 90, h: 130, 
-    gameX: 150, gameY: 1500 
+    pinX: 225, pinY: 1480, gameX: 150, gameY: 1500 
   },
   { 
     id: 20, 
@@ -207,7 +207,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '966,38 1046,38 1046,171 966,171',
     x: 966, y: 38, w: 80, h: 133, 
-    gameX: 920, gameY: 100 
+    pinX: 1006, pinY: 150, gameX: 920, gameY: 100 
   },
   { 
     id: 21, 
@@ -217,7 +217,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '570,1020 880,1020 880,1590 570,1590',
     x: 570, y: 1020, w: 310, h: 570, 
-    gameX: 720, gameY: 1100 
+    pinX: 725, pinY: 1160, gameX: 720, gameY: 1100 
   }
 ];
 
@@ -241,11 +241,6 @@ const MapOverlay = ({ playerPos, onTeleport }) => {
   const [teleportToast, setTeleportToast] = useState(null);
   const [waypointBuilding, setWaypointBuilding] = useState(null);
 
-  // Pan & Zoom State for the Modal Map Viewport
-  const [zoomScale, setZoomScale] = useState(1);
-  const [zoomPan, setZoomPan] = useState({ x: 0, y: 0 });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
 
   const mapViewportRef = useRef(null);
@@ -277,50 +272,12 @@ const MapOverlay = ({ playerPos, onTeleport }) => {
     });
   }, [searchQuery, activeCategory]);
 
-  // Auto focus & zoom map view on a targeted building
-  const focusBuildingOnMap = (b) => {
-    if (!b) return;
-    const targetX = b.shape === 'oval' ? b.cx : b.x + (b.w ? b.w / 2 : 0);
-    const targetY = b.shape === 'oval' ? b.cy : b.y + (b.h ? b.h / 2 : 0);
-
-    const containerW = mapViewportRef.current ? mapViewportRef.current.clientWidth : 600;
-    const containerH = mapViewportRef.current ? mapViewportRef.current.clientHeight : 600;
-
-    const targetScale = 2.2;
-    const panX = (containerW / 2) - (targetX / MAP_SIZE) * containerW * targetScale;
-    const panY = (containerH / 2) - (targetY / MAP_SIZE) * containerH * targetScale;
-
-    setZoomScale(targetScale);
-    setZoomPan({ x: panX, y: panY });
-  };
+  const focusBuildingOnMap = (b) => {};
 
   const handleSelectBuilding = (b) => {
     setSelectedBuilding(b);
     setActiveTab('inspect');
     focusBuildingOnMap(b);
-  };
-
-  const resetMapZoom = () => {
-    setZoomScale(1);
-    setZoomPan({ x: 0, y: 0 });
-  };
-
-  // Mouse wheel zoom
-  const handleWheel = (e) => {
-    e.preventDefault();
-    const delta = e.deltaY < 0 ? 0.25 : -0.25;
-    setZoomScale(prev => {
-      const next = Math.max(1, Math.min(prev + delta, 4));
-      if (next === 1) setZoomPan({ x: 0, y: 0 });
-      return next;
-    });
-  };
-
-  // Drag panning handlers
-  const handleMouseDown = (e) => {
-    if (e.button !== 0) return;
-    setIsDragging(true);
-    setDragStart({ x: e.clientX - zoomPan.x, y: e.clientY - zoomPan.y });
   };
 
   const handleMouseMove = (e) => {
@@ -331,16 +288,6 @@ const MapOverlay = ({ playerPos, onTeleport }) => {
         y: e.clientY - rect.top - 10
       });
     }
-
-    if (!isDragging) return;
-    setZoomPan({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y
-    });
-  };
-
-  const handleMouseUp = () => {
-    setIsDragging(false);
   };
 
   // Fast Travel Teleport
@@ -351,123 +298,46 @@ const MapOverlay = ({ playerPos, onTeleport }) => {
     setTimeout(() => setTeleportToast(null), 3000);
   };
 
-  // Render pixel-accurate GIS style building outlines
+  // Render invisible hotspot over the image's existing pins
   const renderBuildingHotspot = (b, isInteractive) => {
     const isSelected = selectedBuilding?.id === b.id;
     const isHovered = hoveredBuilding?.id === b.id;
-
-    // Professional GIS style outlines (tight red/cyan stroke)
-    const strokeColor = isSelected ? '#ff3366' : isHovered ? '#60efff' : 'rgba(255, 51, 102, 0.7)';
-    const strokeWidth = isSelected || isHovered ? 2.5 : 1.5;
-    const fillColor = isSelected ? 'rgba(255, 51, 102, 0.28)' : isHovered ? 'rgba(96, 239, 255, 0.22)' : 'rgba(255, 51, 102, 0.06)';
-
-    const highlightProps = isInteractive ? {
-      style: { cursor: 'pointer', transition: 'fill 0.2s, stroke 0.2s, stroke-width 0.2s' },
-      fill: fillColor,
-      stroke: strokeColor,
-      strokeWidth: strokeWidth,
-      onClick: () => handleSelectBuilding(b),
-      onMouseEnter: () => setHoveredBuilding(b),
-      onMouseLeave: () => setHoveredBuilding(null)
-    } : {
-      fill: 'none',
-      stroke: 'none'
-    };
-
-    if (b.shape === 'polygon') {
-      return (
-        <polygon
-          key={b.id}
-          points={b.points}
-          {...highlightProps}
-          className="map-building-hotspot"
-        />
-      );
-    }
-
-    if (b.shape === 'oval') {
-      return (
-        <ellipse
-          key={b.id}
-          cx={b.cx}
-          cy={b.cy}
-          rx={b.rx}
-          ry={b.ry}
-          {...highlightProps}
-          className="map-building-hotspot"
-        />
-      );
-    }
-
-    return (
-      <rect
-        key={b.id}
-        x={b.x}
-        y={b.y}
-        width={b.w}
-        height={b.h}
-        rx={3}
-        ry={3}
-        {...highlightProps}
-        className="map-building-hotspot"
-      />
-    );
-  };
-
-  // Render building number badges at their exact centers
-  const renderBuildingNumber = (b, isInteractive) => {
-    let textX = b.x + (b.w ? b.w / 2 : 0);
-    let textY = b.y + (b.h ? b.h / 2 : 0) + 5;
-    
-    if (b.shape === 'oval') {
-      textX = b.cx;
-      textY = b.cy + 5;
-    } else if (b.id === 10) { // Boys hostel center
-      textX = 1740;
-      textY = 725;
-    }
-
-    const isSelected = selectedBuilding?.id === b.id;
-    const isHovered = hoveredBuilding?.id === b.id;
+    const textX = b.pinX || (b.shape === 'oval' ? b.cx : b.x + (b.w ? b.w / 2 : 0));
+    const textY = b.pinY || (b.shape === 'oval' ? b.cy : b.y + (b.h ? b.h / 2 : 0));
 
     return (
       <g 
-        key={`num-${b.id}`} 
+        key={`hotspot-${b.id}`} 
         style={isInteractive ? { cursor: 'pointer' } : { pointerEvents: 'none' }}
         onClick={isInteractive ? () => handleSelectBuilding(b) : undefined}
         onMouseEnter={isInteractive ? () => setHoveredBuilding(b) : undefined}
         onMouseLeave={isInteractive ? () => setHoveredBuilding(null) : undefined}
       >
-        {isInteractive && (
-          <circle 
-            cx={textX} 
-            cy={textY - 5} 
-            r={24} 
-            fill="transparent" 
-          />
-        )}
         <circle 
           cx={textX} 
           cy={textY - 5} 
-          r={isSelected || isHovered ? 15 : 13} 
-          fill={isSelected ? '#ff3366' : isHovered ? '#0061ff' : 'rgba(0, 0, 0, 0.85)'} 
-          stroke="#fff" 
-          strokeWidth={isSelected || isHovered ? 2.5 : 1} 
-          style={{ transition: 'fill 0.2s, r 0.2s, stroke-width 0.2s' }}
+          r={24} 
+          fill="transparent" 
         />
-        <text
-          x={textX}
-          y={textY - 1}
-          fill="#fff"
-          fontSize={isSelected || isHovered ? "12" : "11"}
-          fontWeight="bold"
-          textAnchor="middle"
-          fontFamily="Inter, sans-serif"
-        >
-          {b.id}
-        </text>
+        {isInteractive && (isSelected || isHovered) && (
+          <circle 
+            cx={textX} 
+            cy={textY - 5} 
+            r={isSelected ? 8 : 6} 
+            fill="none"
+            stroke={isSelected ? '#ff3366' : '#60efff'}
+            strokeWidth={isSelected ? 3 : 2}
+            opacity={0.95}
+            style={{ transition: 'all 0.2s ease' }}
+          />
+        )}
       </g>
     );
+  };
+
+  // Numbers are already baked into the background image, return null
+  const renderBuildingNumber = (b, isInteractive) => {
+    return null;
   };
 
   // Common SVG layout using campus_map.png as background
@@ -486,9 +356,8 @@ const MapOverlay = ({ playerPos, onTeleport }) => {
         {/* Pinpoint Marker for Selected Building */}
         {isInteractive && selectedBuilding && (
           (() => {
-            let pinX = selectedBuilding.shape === 'oval' ? selectedBuilding.cx : selectedBuilding.x + (selectedBuilding.w ? selectedBuilding.w / 2 : 0);
-            let pinY = selectedBuilding.shape === 'oval' ? selectedBuilding.cy : selectedBuilding.y + (selectedBuilding.h ? selectedBuilding.h / 2 : 0);
-            if (selectedBuilding.id === 10) { pinX = 1740; pinY = 720; }
+            let pinX = selectedBuilding.pinX || (selectedBuilding.shape === 'oval' ? selectedBuilding.cx : selectedBuilding.x + (selectedBuilding.w ? selectedBuilding.w / 2 : 0));
+            let pinY = selectedBuilding.pinY || (selectedBuilding.shape === 'oval' ? selectedBuilding.cy : selectedBuilding.y + (selectedBuilding.h ? selectedBuilding.h / 2 : 0));
             return (
               <g key="selected-pin" style={{ pointerEvents: 'none' }}>
                 <circle cx={pinX} cy={pinY} r={18} fill="none" stroke="#ff3366" strokeWidth={3} className="pulsing-ring" />
@@ -510,8 +379,8 @@ const MapOverlay = ({ playerPos, onTeleport }) => {
         {/* Waypoint Marker */}
         {isInteractive && waypointBuilding && waypointBuilding.id !== selectedBuilding?.id && (
           (() => {
-            const wpX = waypointBuilding.shape === 'oval' ? waypointBuilding.cx : waypointBuilding.x + (waypointBuilding.w ? waypointBuilding.w / 2 : 0);
-            const wpY = waypointBuilding.shape === 'oval' ? waypointBuilding.cy : waypointBuilding.y + (waypointBuilding.h ? waypointBuilding.h / 2 : 0);
+            const wpX = waypointBuilding.pinX || (waypointBuilding.shape === 'oval' ? waypointBuilding.cx : waypointBuilding.x + (waypointBuilding.w ? waypointBuilding.w / 2 : 0));
+            const wpY = waypointBuilding.pinY || (waypointBuilding.shape === 'oval' ? waypointBuilding.cy : waypointBuilding.y + (waypointBuilding.h ? waypointBuilding.h / 2 : 0));
             return (
               <g key="waypoint-pin" style={{ pointerEvents: 'none' }}>
                 <circle cx={wpX} cy={wpY} r={14} fill="none" stroke="#60efff" strokeWidth={2} className="pulsing-ring" />
@@ -567,7 +436,7 @@ const MapOverlay = ({ playerPos, onTeleport }) => {
             {/* Modal Header */}
             <div style={styles.modalHeader}>
               <div style={styles.modalTitleArea}>
-                <h2 style={styles.modalTitle}>Srinivas Institute of Technology</h2>
+                <h2 style={styles.modalTitle}>Srinivas Institute of Technology - NEW PIN MAP</h2>
                 <p style={styles.modalSubtitle}>Valachil Campus Map & Interactive GIS Building Directory</p>
               </div>
               <div style={styles.headerButtons}>
@@ -598,70 +467,16 @@ const MapOverlay = ({ playerPos, onTeleport }) => {
 
             {/* Modal Main Body */}
             <div style={styles.modalBody}>
-              {/* Map (Left) - Interactive Viewport with Pan & Zoom */}
+              {/* Map (Left) - Interactive Viewport */}
               <div 
                 ref={mapViewportRef}
-                style={{
-                  ...styles.mapContainer,
-                  cursor: isDragging ? 'grabbing' : 'grab'
-                }}
-                onWheel={handleWheel}
-                onMouseDown={handleMouseDown}
+                style={styles.mapContainer}
                 onMouseMove={handleMouseMove}
-                onMouseUp={handleMouseUp}
-                onMouseLeave={handleMouseUp}
               >
-                {/* Zoom Controls Floating Toolbar */}
-                <div style={styles.zoomControls}>
-                  <button 
-                    className="zoom-btn"
-                    style={styles.zoomBtn} 
-                    onClick={() => setZoomScale(prev => Math.min(prev + 0.3, 4))}
-                    title="Zoom In"
-                  >
-                    +
-                  </button>
-                  <button 
-                    className="zoom-btn"
-                    style={styles.zoomBtn} 
-                    onClick={() => setZoomScale(prev => {
-                      const next = Math.max(prev - 0.3, 1);
-                      if (next === 1) setZoomPan({ x: 0, y: 0 });
-                      return next;
-                    })}
-                    title="Zoom Out"
-                  >
-                    −
-                  </button>
-                  <button 
-                    className="zoom-btn"
-                    style={styles.zoomResetBtn} 
-                    onClick={resetMapZoom}
-                    title="Reset Zoom & Pan"
-                  >
-                    Reset
-                  </button>
-                  {selectedBuilding && (
-                    <button 
-                      className="zoom-btn"
-                      style={styles.zoomFocusBtn} 
-                      onClick={() => focusBuildingOnMap(selectedBuilding)}
-                      title="Focus on Selected Building"
-                    >
-                      🎯 Focus #{selectedBuilding.id}
-                    </button>
-                  )}
-                </div>
 
-                {/* Map Scaled Content Box */}
-                <div 
-                  style={{
-                    ...styles.mapInner,
-                    transform: `translate(${zoomPan.x}px, ${zoomPan.y}px) scale(${zoomScale})`,
-                    transformOrigin: '0 0',
-                    transition: isDragging ? 'none' : 'transform 0.15s ease-out'
-                  }}
-                >
+
+                {/* Map Content Box */}
+                <div style={styles.mapInner}>
                   <img
                     src="/campus_map.png"
                     alt="SIT Valachil Campus Map"
@@ -675,21 +490,7 @@ const MapOverlay = ({ playerPos, onTeleport }) => {
                   >
                     {BUILDINGS.map(b => renderBuildingHotspot(b, true))}
                     {BUILDINGS.map(b => renderBuildingNumber(b, true))}
-                    {selectedBuilding && (() => {
-                      let pinX = selectedBuilding.shape === 'oval' ? selectedBuilding.cx : selectedBuilding.x + (selectedBuilding.w ? selectedBuilding.w / 2 : 0);
-                      let pinY = selectedBuilding.shape === 'oval' ? selectedBuilding.cy : selectedBuilding.y + (selectedBuilding.h ? selectedBuilding.h / 2 : 0);
-                      if (selectedBuilding.id === 10) { pinX = 1740; pinY = 720; }
-                      return (
-                        <g key="selected-pin" style={{ pointerEvents: 'none' }}>
-                          <circle cx={pinX} cy={pinY} r={18} fill="none" stroke="#ff3366" strokeWidth={3} className="pulsing-ring" />
-                          <ellipse cx={pinX} cy={pinY + 2} rx={7} ry={2.5} fill="rgba(0,0,0,0.3)" />
-                          <g className="bouncing-pin">
-                            <path d={`M ${pinX} ${pinY} C ${pinX-10} ${pinY-10} ${pinX-10} ${pinY-26} ${pinX} ${pinY-26} C ${pinX+10} ${pinY-26} ${pinX+10} ${pinY-10} ${pinX} ${pinY} Z`} fill="#ff3366" stroke="#fff" strokeWidth={1.5} />
-                            <circle cx={pinX} cy={pinY - 17} r={3.5} fill="#fff" />
-                          </g>
-                        </g>
-                      );
-                    })()}
+
                     {calibratedPos && (
                       <g key="player-marker-full">
                         <circle cx={calibratedPos.x} cy={calibratedPos.y} r={28} fill="#ffeb3b" opacity={0.35}>
