@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
+import MiniMap from './MiniMap';
 
 const MAP_SIZE = 2000;
 
@@ -230,7 +231,7 @@ const CATEGORIES = [
   { id: 'sports_admin', label: 'Admin & Sports' }
 ];
 
-const MapOverlay = ({ playerPos, onTeleport }) => {
+const MapOverlay = ({ gameState, onTeleport }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedBuilding, setSelectedBuilding] = useState(null);
   const [hoveredBuilding, setHoveredBuilding] = useState(null);
@@ -247,18 +248,9 @@ const MapOverlay = ({ playerPos, onTeleport }) => {
 
   // Calibrate player coordinates to align with campus_map.png
   const calibratedPos = useMemo(() => {
-    return mapCoordinates(playerPos.x, playerPos.y);
-  }, [playerPos]);
-
-  // Minimap scrolling viewbox
-  const miniViewBox = useMemo(() => {
-    const size = 600;
-    let vx = calibratedPos.x - size / 2;
-    let vy = calibratedPos.y - size / 2;
-    vx = Math.max(0, Math.min(vx, MAP_SIZE - size));
-    vy = Math.max(0, Math.min(vy, MAP_SIZE - size));
-    return `${vx} ${vy} ${size} ${size}`;
-  }, [calibratedPos]);
+    if (!gameState) return { x: 0, y: 0 };
+    return mapCoordinates(gameState.playerX, gameState.playerY);
+  }, [gameState]);
 
   // Filter buildings based on search query and active category chip
   const filteredBuildings = useMemo(() => {
@@ -272,7 +264,7 @@ const MapOverlay = ({ playerPos, onTeleport }) => {
     });
   }, [searchQuery, activeCategory]);
 
-  const focusBuildingOnMap = (b) => {};
+  const focusBuildingOnMap = () => {};
 
   const handleSelectBuilding = (b) => {
     setSelectedBuilding(b);
@@ -336,97 +328,14 @@ const MapOverlay = ({ playerPos, onTeleport }) => {
   };
 
   // Numbers are already baked into the background image, return null
-  const renderBuildingNumber = (b, isInteractive) => {
+  const renderBuildingNumber = () => {
     return null;
-  };
-
-  // Common SVG layout using campus_map.png as background
-  const renderSvgContent = (isInteractive) => {
-    return (
-      <>
-        {/* Base Image Map */}
-        <image href="/campus_map.png" x="0" y="0" width={MAP_SIZE} height={MAP_SIZE} />
-
-        {/* Interactive Building Overlays */}
-        {BUILDINGS.map(b => renderBuildingHotspot(b, isInteractive))}
-
-        {/* Number Labels */}
-        {BUILDINGS.map(b => renderBuildingNumber(b, isInteractive))}
-
-        {/* Pinpoint Marker for Selected Building */}
-        {isInteractive && selectedBuilding && (
-          (() => {
-            let pinX = selectedBuilding.pinX || (selectedBuilding.shape === 'oval' ? selectedBuilding.cx : selectedBuilding.x + (selectedBuilding.w ? selectedBuilding.w / 2 : 0));
-            let pinY = selectedBuilding.pinY || (selectedBuilding.shape === 'oval' ? selectedBuilding.cy : selectedBuilding.y + (selectedBuilding.h ? selectedBuilding.h / 2 : 0));
-            return (
-              <g key="selected-pin" style={{ pointerEvents: 'none' }}>
-                <circle cx={pinX} cy={pinY} r={18} fill="none" stroke="#ff3366" strokeWidth={3} className="pulsing-ring" />
-                <ellipse cx={pinX} cy={pinY + 2} rx={7} ry={2.5} fill="rgba(0,0,0,0.3)" />
-                <g className="bouncing-pin">
-                  <path
-                    d={`M ${pinX} ${pinY} C ${pinX - 10} ${pinY - 10} ${pinX - 10} ${pinY - 26} ${pinX} ${pinY - 26} C ${pinX + 10} ${pinY - 26} ${pinX + 10} ${pinY - 10} ${pinX} ${pinY} Z`}
-                    fill="#ff3366"
-                    stroke="#fff"
-                    strokeWidth={1.5}
-                  />
-                  <circle cx={pinX} cy={pinY - 17} r={3.5} fill="#fff" />
-                </g>
-              </g>
-            );
-          })()
-        )}
-
-        {/* Waypoint Marker */}
-        {isInteractive && waypointBuilding && waypointBuilding.id !== selectedBuilding?.id && (
-          (() => {
-            const wpX = waypointBuilding.pinX || (waypointBuilding.shape === 'oval' ? waypointBuilding.cx : waypointBuilding.x + (waypointBuilding.w ? waypointBuilding.w / 2 : 0));
-            const wpY = waypointBuilding.pinY || (waypointBuilding.shape === 'oval' ? waypointBuilding.cy : waypointBuilding.y + (waypointBuilding.h ? waypointBuilding.h / 2 : 0));
-            return (
-              <g key="waypoint-pin" style={{ pointerEvents: 'none' }}>
-                <circle cx={wpX} cy={wpY} r={14} fill="none" stroke="#60efff" strokeWidth={2} className="pulsing-ring" />
-                <circle cx={wpX} cy={wpY} r={6} fill="#60efff" stroke="#fff" strokeWidth={1} />
-                <text x={wpX} y={wpY - 12} fill="#60efff" fontSize="9" fontWeight="bold" textAnchor="middle" fontFamily="Inter, sans-serif">WAYPOINT</text>
-              </g>
-            );
-          })()
-        )}
-
-        {/* Calibrated Player Character Marker */}
-        {calibratedPos && (
-          <g key="player-marker">
-            <circle cx={calibratedPos.x} cy={calibratedPos.y} r={28} fill="#ffeb3b" opacity={0.35}>
-              <animate attributeName="r" values="18;34;18" dur="2s" repeatCount="indefinite" />
-              <animate attributeName="opacity" values="0.5;0.1;0.5" dur="2s" repeatCount="indefinite" />
-            </circle>
-            <circle cx={calibratedPos.x} cy={calibratedPos.y} r={10} fill="#f44336" stroke="#fff" strokeWidth={2.5} />
-            <polygon points={`${calibratedPos.x},${calibratedPos.y - 18} ${calibratedPos.x - 6},${calibratedPos.y - 10} ${calibratedPos.x + 6},${calibratedPos.y - 10}`} fill="#f44336" stroke="#fff" strokeWidth={1} />
-            <text x={calibratedPos.x} y={calibratedPos.y + 3} fill="#fff" fontSize="8" fontWeight="900" textAnchor="middle" fontFamily="'Inter', sans-serif">YOU</text>
-          </g>
-        )}
-      </>
-    );
   };
 
   return (
     <>
       {/* --- HUD MINI-MAP (Top Right) --- */}
-      <div 
-        style={styles.miniMapWrapper}
-        onClick={() => setIsOpen(true)}
-        className="hud-minimap-btn"
-        title="Click to open Interactive Campus Map"
-      >
-        <svg 
-          viewBox={miniViewBox}
-          style={styles.miniMapSvg}
-        >
-          {renderSvgContent(false)}
-        </svg>
-        <div style={styles.miniMapOverlay}>
-          <span style={styles.miniMapLabel}>MAP</span>
-          <span style={styles.miniMapExpandHint}>CLICK 🗺️</span>
-        </div>
-      </div>
+      <MiniMap gameState={gameState} onClick={() => setIsOpen(true)} />
 
       {/* --- FULL MAP MODAL --- */}
       {isOpen && (

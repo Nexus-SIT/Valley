@@ -35,25 +35,7 @@ function App() {
 
       {isPlaying && (
         <div style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden' }}>
-          {/* Top Bar Return Button */}
-          <div style={{
-            position: 'absolute',
-            top: '16px',
-            right: '16px',
-            zIndex: 90
-          }}>
-            <button 
-              className="btn-ghost" 
-              onClick={() => setIsPlaying(false)}
-              style={{
-                backgroundColor: 'rgba(253, 251, 247, 0.9)',
-                fontSize: '0.8rem',
-                padding: '6px 14px'
-              }}
-            >
-              ⬅ EXIT TO LANDING PAGE
-            </button>
-          </div>
+
 
           <GameCanvas onInteract={handleInteract} />
           {activeModal === 'nexus' && <NexusModal onClose={closeModal} />}

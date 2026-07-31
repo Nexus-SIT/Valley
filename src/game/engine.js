@@ -1,9 +1,9 @@
 import { REGIONS, MAP_WIDTH, MAP_HEIGHT, NEXUS_DOOR_BOX, SIGN_BOX } from './mapData';
 
-// Tiny player size to match map scale
 export const PLAYER_WIDTH = 16;
 export const PLAYER_HEIGHT = 24;
-export const PLAYER_SPEED = 2;
+
+export const BASE_SPEED_PER_MS = 0.25;
 
 export class GameEngine {
   constructor(startX, startY, onInteract) {
@@ -12,9 +12,9 @@ export class GameEngine {
       y: startY,
       width: PLAYER_WIDTH,
       height: PLAYER_HEIGHT,
-      color: '#ffeb3b', // simple yellow player
+      color: '#ffeb3b',
       isMoving: false,
-      direction: 'down', // 'down', 'up', 'left', 'right'
+      direction: 'down',
       animFrame: 0,
       animTimer: 0,
     };
@@ -24,50 +24,56 @@ export class GameEngine {
       a: false,
       s: false,
       d: false,
-      ArrowUp: false,
-      ArrowLeft: false,
-      ArrowDown: false,
-      ArrowRight: false,
     };
 
     this.onInteract = onInteract;
   }
 
   handleKeyDown = (e) => {
-    if (Object.prototype.hasOwnProperty.call(this.keys, e.key)) {
-      this.keys[e.key] = true;
-    }
-    if (e.key === 'e' || e.key === 'E' || e.key === ' ') {
+    const code = e.code || '';
+    const key = e.key ? e.key.toLowerCase() : '';
+
+    if (code === 'KeyW' || code === 'ArrowUp' || key === 'w' || key === 'arrowup') this.keys.w = true;
+    if (code === 'KeyS' || code === 'ArrowDown' || key === 's' || key === 'arrowdown') this.keys.s = true;
+    if (code === 'KeyA' || code === 'ArrowLeft' || key === 'a' || key === 'arrowleft') this.keys.a = true;
+    if (code === 'KeyD' || code === 'ArrowRight' || key === 'd' || key === 'arrowright') this.keys.d = true;
+
+    if (code === 'KeyE' || code === 'Space' || key === 'e' || key === ' ') {
       this.checkInteraction();
     }
   };
 
   handleKeyUp = (e) => {
-    if (Object.prototype.hasOwnProperty.call(this.keys, e.key)) {
-      this.keys[e.key] = false;
-    }
+    const code = e.code || '';
+    const key = e.key ? e.key.toLowerCase() : '';
+
+    if (code === 'KeyW' || code === 'ArrowUp' || key === 'w' || key === 'arrowup') this.keys.w = false;
+    if (code === 'KeyS' || code === 'ArrowDown' || key === 's' || key === 'arrowdown') this.keys.s = false;
+    if (code === 'KeyA' || code === 'ArrowLeft' || key === 'a' || key === 'arrowleft') this.keys.a = false;
+    if (code === 'KeyD' || code === 'ArrowRight' || key === 'd' || key === 'arrowright') this.keys.d = false;
   };
 
-  update = () => {
+  update = (delta = 16.666) => {
+    const safeDelta = Math.min(delta, 100);
+    const speed = BASE_SPEED_PER_MS * safeDelta;
+
     let dx = 0;
     let dy = 0;
 
-    if (this.keys.w || this.keys.ArrowUp) dy -= PLAYER_SPEED;
-    if (this.keys.s || this.keys.ArrowDown) dy += PLAYER_SPEED;
-    if (this.keys.a || this.keys.ArrowLeft) dx -= PLAYER_SPEED;
-    if (this.keys.d || this.keys.ArrowRight) dx += PLAYER_SPEED;
+    if (this.keys.w) dy -= speed;
+    if (this.keys.s) dy += speed;
+    if (this.keys.a) dx -= speed;
+    if (this.keys.d) dx += speed;
 
-    // Normalize diagonal movement
     if (dx !== 0 && dy !== 0) {
       const length = Math.sqrt(dx * dx + dy * dy);
-      dx = (dx / length) * PLAYER_SPEED;
-      dy = (dy / length) * PLAYER_SPEED;
+      dx = (dx / length) * speed;
+      dy = (dy / length) * speed;
     }
 
     if (dx !== 0 || dy !== 0) {
       this.movePlayer(dx, dy);
       
-      // Update direction based on primary movement axis
       if (Math.abs(dx) > Math.abs(dy)) {
         this.player.direction = dx > 0 ? 'right' : 'left';
       } else {
@@ -75,26 +81,24 @@ export class GameEngine {
       }
 
       this.player.isMoving = true;
-      this.player.animTimer++;
-      if (this.player.animTimer >= 8) { // 8 ticks per frame
+      this.player.animTimer += safeDelta;
+      if (this.player.animTimer >= 100) {
         this.player.animTimer = 0;
         this.player.animFrame = (this.player.animFrame + 1) % 4;
       }
     } else {
       this.player.isMoving = false;
       this.player.animTimer = 0;
-      this.player.animFrame = 0; // Reset to 'STAND' frame
+      this.player.animFrame = 0;
     }
   };
 
   movePlayer = (dx, dy) => {
-    // Check X movement
     if (dx !== 0) {
       if (!this.checkCollision(this.player.x + dx, this.player.y)) {
         this.player.x += dx;
       }
     }
-    // Check Y movement
     if (dy !== 0) {
       if (!this.checkCollision(this.player.x, this.player.y + dy)) {
         this.player.y += dy;
@@ -103,43 +107,25 @@ export class GameEngine {
   };
 
   teleportPlayer = (targetX, targetY) => {
-    // Clamp to map boundaries
     const clampedX = Math.max(10, Math.min(targetX, MAP_WIDTH - this.player.width - 10));
     const clampedY = Math.max(10, Math.min(targetY, MAP_HEIGHT - this.player.height - 10));
     
-    // Check collision at target, if solid, try small offsets around target
-    if (!this.checkCollision(clampedX, clampedY)) {
-      this.player.x = clampedX;
-      this.player.y = clampedY;
-    } else {
-      // Find nearest non-colliding spot within 50px radius
-      const offsets = [
-        [0, 30], [0, -30], [30, 0], [-30, 0],
-        [30, 30], [-30, -30], [50, 0], [-50, 0], [0, 50], [0, -50]
-      ];
-      for (const [ox, oy] of offsets) {
-        if (!this.checkCollision(clampedX + ox, clampedY + oy)) {
-          this.player.x = clampedX + ox;
-          this.player.y = clampedY + oy;
-          break;
-        }
-      }
-    }
+    this.player.x = clampedX;
+    this.player.y = clampedY;
     this.player.isMoving = false;
   };
 
   checkCollision = (newX, newY) => {
-    const left = newX;
-    const right = newX + this.player.width;
-    const top = newY;
-    const bottom = newY + this.player.height;
+    const left = newX + 2;
+    const right = newX + 14;
+    const top = newY + 14;
+    const bottom = newY + 24;
 
-    // Map boundaries
+    // World map boundaries (0 to 2000)
     if (left < 0 || right > MAP_WIDTH || top < 0 || bottom > MAP_HEIGHT) {
       return true;
     }
 
-    // AABB Collision with solid regions
     for (let region of REGIONS) {
       if (region.solid) {
         if (
@@ -148,7 +134,7 @@ export class GameEngine {
           bottom > region.y &&
           top < region.y + region.h
         ) {
-          return true; // Collided
+          return true;
         }
       }
     }

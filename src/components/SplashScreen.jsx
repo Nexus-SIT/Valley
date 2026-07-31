@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 const SplashScreen = ({ onPlay }) => {
   const [timeOfDay, setTimeOfDay] = useState('day'); // 'day', 'night', 'rain'
   const [selectedBuilding, setSelectedBuilding] = useState('cs_lab');

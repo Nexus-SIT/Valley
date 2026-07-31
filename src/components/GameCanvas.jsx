@@ -2,122 +2,41 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import Phaser from 'phaser';
 import { GameEngine } from '../game/engine';
 import {
-  REGIONS,
   MAP_WIDTH, MAP_HEIGHT,
-  SPAWN_X, SPAWN_Y,
-  NEXUS_DOOR_BOX, SIGN_BOX,
+  SPAWN_X, SPAWN_Y
 } from '../game/mapData';
 import MapOverlay from './MapOverlay';
 
-const ZOOM = 4;
+const DEFAULT_ZOOM = 4;
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 8;
 
-// ─── Colour helpers ─────────────────────────────────────────────────────────
-const hexToInt = (hex) => parseInt(hex.replace('#', ''), 16);
-
-// ─── Campus-map-style building renderer ─────────────────────────────────────
-// Produces a top-down "hip roof" look matching campus_map.png:
-//   tan  outer border  →  dark-blue eave  →  mid-blue slope  →  bright-blue flat top
-//   + light-blue sun-glint on the top/left edges
-//   + subtle horizontal panel lines
-function drawCampusBuilding(gfx, x, y, w, h) {
-  const WALL  = 10;   // tan border thickness (game units — visible wall from above)
-  const STEP  =  5;   // each hip-roof tier thickness
-
-  // 1 ── Drop shadow
-  gfx.fillStyle(0x000000, 0.20);
-  gfx.fillRect(x + 4, y + 4, w, h);
-
-  // 2 ── Tan / beige surround  (walls seen from above)
-  gfx.fillStyle(0xc9aa80, 1);
-  gfx.fillRect(x, y, w, h);
-
-  // 3 ── Hip roof — 3 nested rects, darkest→brightest (eave → slope → flat top)
-  gfx.fillStyle(0x2a5498, 1);               // darkest outer eave
-  gfx.fillRect(x + WALL,          y + WALL,
-               w - WALL * 2,      h - WALL * 2);
-
-  gfx.fillStyle(0x3a6ab0, 1);              // mid slope
-  gfx.fillRect(x + WALL + STEP,       y + WALL + STEP,
-               w - WALL * 2 - STEP * 2, h - WALL * 2 - STEP * 2);
-
-  gfx.fillStyle(0x4a80c4, 1);              // brightest flat-top centre
-  gfx.fillRect(x + WALL + STEP * 2,       y + WALL + STEP * 2,
-               w - WALL * 2 - STEP * 4, h - WALL * 2 - STEP * 4);
-
-  // 4 ── Sun glint  (lighter strip along top & left edges of the flat top)
-  const rl = x + WALL + STEP * 2;
-  const rt = y + WALL + STEP * 2;
-  const rw = w - WALL * 2 - STEP * 4;
-  const rh = h - WALL * 2 - STEP * 4;
-
-  gfx.fillStyle(0x82bcf0, 0.50);
-  gfx.fillRect(rl, rt, rw, STEP * 1.4);   // top glint strip
-  gfx.fillRect(rl, rt, STEP * 1.4, rh);   // left glint strip
-
-  // 5 ── Horizontal roof-panel lines (every 40 game units)
-  gfx.lineStyle(0.6, 0x2a5498, 0.28);
-  for (let py = rt + 40; py < rt + rh; py += 40) {
-    gfx.lineBetween(rl, py, rl + rw, py);
-  }
-
-  // 6 ── Outer wall outline
-  gfx.lineStyle(1.5, 0x9a7d55, 1);
-  gfx.strokeRect(x, y, w, h);
-}
-
-// ─── Static world draw (called once in create()) ──────────────────────────
-function drawWorld(gfx) {
-  for (const region of REGIONS) {
-    // ── Sign ──────────────────────────────────────────────────────────────
-    if (region.type === 'sign') {
-      gfx.fillStyle(0x5c4033);
-      gfx.fillRect(region.x + region.w / 2 - 2, region.y + 10, 4, 10);
-      gfx.fillStyle(hexToInt(region.color));
-      gfx.fillRect(region.x, region.y, region.w, 15);
-      gfx.lineStyle(1, 0x3d2b1f, 1);
-      gfx.strokeRect(region.x, region.y, region.w, 15);
-      continue;
-    }
-
-    // ── Building 1  — campus-map hip-roof style ───────────────────────────
-    if (region.id === 'admin_block_1') {
-      drawCampusBuilding(gfx, region.x, region.y, region.w, region.h);
-      continue;
-    }
-
-    // ── All other regions — plain colour rect ─────────────────────────────
-    gfx.fillStyle(hexToInt(region.color));
-    gfx.fillRect(region.x, region.y, region.w, region.h);
-
-    if (region.solid && region.type !== 'tree') {
-      gfx.lineStyle(0.5, 0x000000, 0.30);
-      gfx.strokeRect(region.x, region.y, region.w, region.h);
-    }
-  }
-
-  // ── Subtle world grid ─────────────────────────────────────────────────
-  gfx.lineStyle(1, 0xffffff, 0.04);
-  for (let i = 0; i < MAP_WIDTH;  i += 100) gfx.lineBetween(i, 0, i, MAP_HEIGHT);
-  for (let i = 0; i < MAP_HEIGHT; i += 100) gfx.lineBetween(0, i, MAP_WIDTH, i);
-
-  // ── Interaction zone indicators ────────────────────────────────────────
-  [NEXUS_DOOR_BOX, SIGN_BOX].forEach((box) => {
-    gfx.fillStyle(0x00ffff, 0.15);
-    gfx.fillRect(box.x, box.y, box.w, box.h);
-    gfx.lineStyle(2, 0x00ffff, 1);
-    gfx.strokeRect(box.x, box.y, box.w, box.h);
-  });
-}
-
-// ─── Component ───────────────────────────────────────────────────────────────
 const GameCanvas = ({ onInteract }) => {
   const containerRef   = useRef(null);
   const gameRef        = useRef(null);
   const engineRef      = useRef(null);
-  const setPosRef      = useRef(null);   // stable ref to React setter (avoid closure stale)
+  const setPosRef      = useRef(null);
+  const [zoomLevel, setZoomLevel] = useState(DEFAULT_ZOOM);
 
-  const [playerPos, setPlayerPos] = useState({ x: SPAWN_X, y: SPAWN_Y });
-  setPosRef.current = setPlayerPos;
+  const [gameState, setGameState] = useState({ 
+    playerX: SPAWN_X, 
+    playerY: SPAWN_Y, 
+    camX: 0, camY: 0, camW: 0, camH: 0 
+  });
+  setPosRef.current = setGameState;
+
+  const updateCameraZoom = useCallback((newZoom) => {
+    const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number(newZoom.toFixed(1))));
+    setZoomLevel(clamped);
+    if (gameRef.current && gameRef.current.scene && gameRef.current.scene.scenes[0]) {
+      const cam = gameRef.current.scene.scenes[0].cameras.main;
+      if (cam) cam.setZoom(clamped);
+    }
+  }, []);
+
+  const handleZoomIn = () => updateCameraZoom(zoomLevel + 0.5);
+  const handleZoomOut = () => updateCameraZoom(zoomLevel - 0.5);
+  const handleResetZoom = () => updateCameraZoom(DEFAULT_ZOOM);
 
   const handleTeleport = useCallback((tx, ty) => {
     const eng = engineRef.current;
@@ -133,78 +52,73 @@ const GameCanvas = ({ onInteract }) => {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    // ── Game engine (movement + collision — unchanged) ─────────────────
     engineRef.current = new GameEngine(SPAWN_X, SPAWN_Y, onInteract);
     const engine = engineRef.current;
 
-    // ── Phaser Scene ──────────────────────────────────────────────────
     class WorldScene extends Phaser.Scene {
       constructor() { super({ key: 'World' }); }
 
       preload() {
-        // walk1–4 are the actual walk-cycle frames (same sprite for all directions)
         for (let f = 1; f <= 4; f++) {
           this.load.image(`p_walk_${f}`, `/characters/main/walk${f}.png`);
         }
-        // manish.png = static standing pose
         this.load.image('p_stand', '/characters/main/manish.png');
+        this.load.image('campus_map', '/campus_map.png');
       }
 
       create() {
-        // ── Draw entire static world once ───────────────────────────
-        const gfx = this.add.graphics();
-        drawWorld(gfx);
+        const bgMap = this.add.image(0, 0, 'campus_map').setOrigin(0, 0);
+        bgMap.setDisplaySize(MAP_WIDTH, MAP_HEIGHT);
 
-        // ── Player sprite ───────────────────────────────────────────
         const p = engine.player;
         this.pImg = this.add
           .image(p.x + p.width / 2, p.y + p.height, 'p_stand')
           .setOrigin(0.5, 1);
 
-        // Scale sprite to 1.5× collision-box height in world units
         this.pImg.displayHeight = p.height * 1.5;
-        this.pImg.scaleX = this.pImg.scaleY;   // maintain aspect ratio
+        this.pImg.scaleX = this.pImg.scaleY;
 
-        // ── Camera — follows player, zoom matches the old ZOOM=4 ────
         this.cameras.main
           .setBounds(0, 0, MAP_WIDTH, MAP_HEIGHT)
           .startFollow(this.pImg, true, 1, 1)
-          .setZoom(ZOOM)
+          .setZoom(DEFAULT_ZOOM)
           .setRoundPixels(true);
       }
 
-      update() {
-        engine.update();
+      update(time, delta) {
+        engine.update(delta);
         const p = engine.player;
 
-        // Reposition sprite
         this.pImg.x = p.x + p.width / 2;
         this.pImg.y = p.y + p.height;
 
-        // Re-apply height scale when texture changes (natural size may differ)
         const targetH = p.height * 1.5;
         if (Math.abs(this.pImg.displayHeight - targetH) > 0.5) {
           this.pImg.displayHeight = targetH;
           this.pImg.scaleX = this.pImg.scaleY;
         }
 
-        // Pick the correct walk frame
         const tex = p.isMoving
-          ? `p_walk_${p.animFrame + 1}`   // animate through walk1–4
-          : 'p_stand';                    // standing still
+          ? `p_walk_${p.animFrame + 1}`
+          : 'p_stand';
         if (this.pImg.texture.key !== tex) {
           this.pImg.setTexture(tex);
-          // Re-apply scale after texture swap (natural dimensions may differ)
           this.pImg.displayHeight = p.height * 1.5;
           this.pImg.scaleX = this.pImg.scaleY;
         }
 
-        // Publish position to React (for MapOverlay)
-        setPosRef.current({ x: Math.round(p.x), y: Math.round(p.y) });
+        const cam = this.cameras.main;
+        setPosRef.current({ 
+          playerX: Math.round(this.pImg.x), 
+          playerY: Math.round(this.pImg.y),
+          camX: Math.round(cam.worldView.x),
+          camY: Math.round(cam.worldView.y),
+          camW: Math.round(cam.worldView.width),
+          camH: Math.round(cam.worldView.height)
+        });
       }
     }
 
-    // ── Phaser game — single canvas, no overlay needed ────────────────
     const game = new Phaser.Game({
       type            : Phaser.AUTO,
       width           : window.innerWidth,
@@ -217,7 +131,6 @@ const GameCanvas = ({ onInteract }) => {
 
     gameRef.current = game;
 
-    // Ensure the Phaser canvas is pixel-perfect behind the HTML overlays
     game.events.once('ready', () => {
       const cv = containerRef.current?.querySelector('canvas');
       if (cv) {
@@ -230,9 +143,26 @@ const GameCanvas = ({ onInteract }) => {
       }
     });
 
-    // Keyboard — engine.js still handles all movement logic
     window.addEventListener('keydown', engine.handleKeyDown);
     window.addEventListener('keyup',   engine.handleKeyUp);
+
+    // Mouse Wheel Zoom
+    const handleWheel = (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.5 : -0.5;
+      setZoomLevel((prev) => {
+        const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Number((prev + delta).toFixed(1))));
+        if (gameRef.current?.scene?.scenes[0]?.cameras?.main) {
+          gameRef.current.scene.scenes[0].cameras.main.setZoom(next);
+        }
+        return next;
+      });
+    };
+
+    const containerEl = containerRef.current;
+    if (containerEl) {
+      containerEl.addEventListener('wheel', handleWheel, { passive: false });
+    }
 
     const onResize = () => gameRef.current?.scale?.resize(window.innerWidth, window.innerHeight);
     window.addEventListener('resize', onResize);
@@ -241,6 +171,9 @@ const GameCanvas = ({ onInteract }) => {
       window.removeEventListener('keydown', engine.handleKeyDown);
       window.removeEventListener('keyup',   engine.handleKeyUp);
       window.removeEventListener('resize',  onResize);
+      if (containerEl) {
+        containerEl.removeEventListener('wheel', handleWheel);
+      }
       gameRef.current?.destroy(true);
       gameRef.current = null;
     };
@@ -249,35 +182,86 @@ const GameCanvas = ({ onInteract }) => {
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'hidden' }}>
 
-      {/* Phaser renders here — the single game canvas */}
+      {/* Phaser Canvas Container */}
       <div
         ref={containerRef}
         style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
       />
 
-      {/* HUD — HTML div sits above Phaser canvas, ignores pointer events */}
-      <div style={{
-        position      : 'absolute',
-        top           : 10,
-        left          : 10,
-        background    : 'rgba(0,0,0,0.60)',
-        color         : '#fff',
-        padding       : '8px 14px',
-        fontFamily    : 'Inter, sans-serif',
-        fontSize      : '14px',
-        lineHeight    : '1.6',
-        pointerEvents : 'none',
-        zIndex        : 20,
-        borderRadius  : '3px',
-      }}>
-        <div>WASD / Arrows to move</div>
-        <div>Find Nexus Building (Top) &amp; Press SPACE</div>
+      {/* Modern Zoom Controls Floating Widget (Bottom Left) */}
+      <div style={styles.zoomWidget}>
+        <button 
+          onClick={handleZoomIn} 
+          style={styles.zoomBtn} 
+          title="Zoom In (or Scroll Up)"
+        >
+          ➕
+        </button>
+        <button 
+          onClick={handleResetZoom} 
+          style={styles.zoomLabelBtn} 
+          title="Reset Zoom to 4.0x"
+        >
+          {zoomLevel.toFixed(1)}x
+        </button>
+        <button 
+          onClick={handleZoomOut} 
+          style={styles.zoomBtn} 
+          title="Zoom Out (or Scroll Down)"
+        >
+          ➖
+        </button>
       </div>
 
-      {/* Map overlay — already has its own positioning & z-index */}
-      <MapOverlay playerPos={playerPos} onTeleport={handleTeleport} />
+      {/* Map overlay */}
+      <MapOverlay gameState={gameState} onTeleport={handleTeleport} />
     </div>
   );
+};
+
+const styles = {
+  zoomWidget: {
+    position: 'fixed',
+    bottom: '24px',
+    left: '24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    backgroundColor: 'rgba(20, 24, 33, 0.85)',
+    backdropFilter: 'blur(10px)',
+    border: '1px solid rgba(255, 255, 255, 0.15)',
+    borderRadius: '12px',
+    padding: '6px',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+    zIndex: 90,
+    userSelect: 'none'
+  },
+  zoomBtn: {
+    width: '36px',
+    height: '36px',
+    borderRadius: '8px',
+    border: 'none',
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    color: '#fff',
+    fontSize: '14px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'all 0.2s ease',
+  },
+  zoomLabelBtn: {
+    padding: '4px 0',
+    borderRadius: '6px',
+    border: 'none',
+    backgroundColor: 'transparent',
+    color: '#60efff',
+    fontSize: '11px',
+    fontWeight: 'bold',
+    fontFamily: "'Inter', sans-serif",
+    cursor: 'pointer',
+    textAlign: 'center',
+  }
 };
 
 export default GameCanvas;
