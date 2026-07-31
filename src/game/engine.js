@@ -93,15 +93,29 @@ export class GameEngine {
     }
   };
 
+  // Sub-stepping movement for pixel-perfect smooth wall sliding (never gets stuck)
   movePlayer = (dx, dy) => {
     if (dx !== 0) {
-      if (!this.checkCollision(this.player.x + dx, this.player.y)) {
-        this.player.x += dx;
+      const steps = Math.max(1, Math.ceil(Math.abs(dx)));
+      const stepX = dx / steps;
+      for (let i = 0; i < steps; i++) {
+        if (!this.checkCollision(this.player.x + stepX, this.player.y)) {
+          this.player.x += stepX;
+        } else {
+          break; // Stop smoothly right at contact point
+        }
       }
     }
+
     if (dy !== 0) {
-      if (!this.checkCollision(this.player.x, this.player.y + dy)) {
-        this.player.y += dy;
+      const steps = Math.max(1, Math.ceil(Math.abs(dy)));
+      const stepY = dy / steps;
+      for (let i = 0; i < steps; i++) {
+        if (!this.checkCollision(this.player.x, this.player.y + stepY)) {
+          this.player.y += stepY;
+        } else {
+          break; // Stop smoothly right at contact point
+        }
       }
     }
   };
@@ -121,7 +135,6 @@ export class GameEngine {
     const top = newY + 14;
     const bottom = newY + 24;
 
-    // World map boundaries (0 to 2000)
     if (left < 0 || right > MAP_WIDTH || top < 0 || bottom > MAP_HEIGHT) {
       return true;
     }
