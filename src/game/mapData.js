@@ -40,8 +40,8 @@ export const REGIONS = [
   { type: 'sign', id: 'github_sign', x: 540, y: 720, w: 20, h: 20, color: '#8b5a2b', solid: true }
 ];
 
-export const SPAWN_X = 350;
-export const SPAWN_Y = 950;
+export const SPAWN_X = 550;
+export const SPAWN_Y = 685;
 
 export const NEXUS_DOOR_BOX = {
   x: 500,
