@@ -149,7 +149,7 @@ const BUILDINGS = [
     shape: 'polygon',
     points: '899,1005 970,1005 970,1460 899,1460',
     x: 899, y: 1005, w: 71, h: 455, 
-    pinX: 934, pinY: 1050, gameX: 880, gameY: 1000 
+    pinX: 934, pinY: 1050, gameX: 855, gameY: 1200 
   },
   { 
     id: 15, 

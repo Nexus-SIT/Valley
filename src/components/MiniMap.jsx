@@ -1,17 +1,11 @@
-
 import { MAP_WIDTH, MAP_HEIGHT } from '../game/mapData';
 
 const MiniMap = ({ gameState, onClick }) => {
-  const { playerX, playerY, camX, camY, camW, camH } = gameState;
+  const { playerX, playerY } = gameState;
 
   // Scale calculations - converting world coordinates to percentage
   const pX = (playerX / MAP_WIDTH) * 100;
   const pY = (playerY / MAP_HEIGHT) * 100;
-  
-  const cX = (camX / MAP_WIDTH) * 100;
-  const cY = (camY / MAP_HEIGHT) * 100;
-  const cW = (camW / MAP_WIDTH) * 100;
-  const cH = (camH / MAP_HEIGHT) * 100;
 
   return (
     <div 
@@ -28,25 +22,38 @@ const MiniMap = ({ gameState, onClick }) => {
           draggable={false}
         />
         
-        {/* Camera Viewport Rectangle */}
-        {camW > 0 && (
-          <div style={{
-            ...styles.viewport,
-            left: `${cX}%`,
-            top: `${cY}%`,
-            width: `${cW}%`,
-            height: `${cH}%`
-          }} />
-        )}
-        
-        {/* Player Marker */}
+        {/* Black User Location Pin Icon (Matching image) */}
         <div style={{
           ...styles.playerMarker,
           left: `${pX}%`,
           top: `${pY}%`,
         }}>
-          <div style={styles.playerPulse} />
-          <div style={styles.playerDot} />
+          <svg 
+            width="12" 
+            height="14" 
+            viewBox="0 0 24 28" 
+            fill="none" 
+            style={styles.locationPinSvg}
+          >
+            {/* Black Map Pin Teardrop Body with White Outline */}
+            <path 
+              d="M12 0C5.37 0 0 5.37 0 12C0 21 12 28 12 28C12 28 24 21 24 12C24 5.37 18.63 0 12 0Z" 
+              fill="#111827" 
+              stroke="#ffffff" 
+              strokeWidth="1.5"
+            />
+            {/* Inner White Circle */}
+            <circle cx="12" cy="11" r="7" fill="#ffffff" />
+            {/* Black Person Silhouette Head */}
+            <circle cx="12" cy="9.2" r="2.8" fill="#111827" />
+            {/* Black Person Silhouette Body */}
+            <path 
+              d="M7.5 15.5C7.5 13.5 9.5 12.5 12 12.5C14.5 12.5 16.5 13.5 16.5 15.5" 
+              stroke="#111827" 
+              strokeWidth="2.2" 
+              strokeLinecap="round"
+            />
+          </svg>
         </div>
       </div>
       
@@ -85,40 +92,14 @@ const styles = {
     objectFit: 'fill',
     display: 'block'
   },
-  viewport: {
-    position: 'absolute',
-    border: '1.5px solid rgba(255, 255, 255, 0.7)',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.4)', // Darkens area outside viewport
-    pointerEvents: 'none'
-  },
   playerMarker: {
     position: 'absolute',
-    width: '0',
-    height: '0',
     pointerEvents: 'none',
     zIndex: 2,
-    transform: 'translate(-50%, -50%)',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center'
   },
-  playerDot: {
-    width: '6px',
-    height: '6px',
-    backgroundColor: '#f44336',
-    border: '1px solid #fff',
-    borderRadius: '50%',
-    position: 'absolute'
-  },
-  playerPulse: {
-    width: '14px',
-    height: '14px',
-    backgroundColor: '#ffeb3b',
-    borderRadius: '50%',
-    position: 'absolute',
-    opacity: 0.5,
-    animation: 'minimap-pulse 2s infinite' // Will add keyframes in css or ignore if undefined
+  locationPinSvg: {
+    transform: 'translate(-50%, -100%)',
+    filter: 'drop-shadow(0px 2px 4px rgba(0, 0, 0, 0.8))'
   },
   overlay: {
     position: 'absolute',
