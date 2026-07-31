@@ -24,7 +24,7 @@ export const REGIONS = [
 ];
 
 export const SPAWN_X = 890;
-export const SPAWN_Y = 1850;
+export const SPAWN_Y = 1950;
 
 export const NEXUS_DOOR_BOX = {
   x: 241,

@@ -7,7 +7,7 @@ import {
 } from '../game/mapData';
 import MapOverlay from './MapOverlay';
 
-const DEFAULT_ZOOM = 4;
+const DEFAULT_ZOOM = 1.5;
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 8;
 
