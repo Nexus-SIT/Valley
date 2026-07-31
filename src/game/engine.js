@@ -102,6 +102,32 @@ export class GameEngine {
     }
   };
 
+  teleportPlayer = (targetX, targetY) => {
+    // Clamp to map boundaries
+    const clampedX = Math.max(10, Math.min(targetX, MAP_WIDTH - this.player.width - 10));
+    const clampedY = Math.max(10, Math.min(targetY, MAP_HEIGHT - this.player.height - 10));
+    
+    // Check collision at target, if solid, try small offsets around target
+    if (!this.checkCollision(clampedX, clampedY)) {
+      this.player.x = clampedX;
+      this.player.y = clampedY;
+    } else {
+      // Find nearest non-colliding spot within 50px radius
+      const offsets = [
+        [0, 30], [0, -30], [30, 0], [-30, 0],
+        [30, 30], [-30, -30], [50, 0], [-50, 0], [0, 50], [0, -50]
+      ];
+      for (const [ox, oy] of offsets) {
+        if (!this.checkCollision(clampedX + ox, clampedY + oy)) {
+          this.player.x = clampedX + ox;
+          this.player.y = clampedY + oy;
+          break;
+        }
+      }
+    }
+    this.player.isMoving = false;
+  };
+
   checkCollision = (newX, newY) => {
     const left = newX;
     const right = newX + this.player.width;

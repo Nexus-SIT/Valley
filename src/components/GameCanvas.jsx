@@ -213,6 +213,16 @@ const GameCanvas = ({ onInteract }) => {
     ctx.fillText('Find Nexus Building (Top) & Press SPACE', 20, 50);
   }
 
+  const handleTeleport = (targetX, targetY) => {
+    if (engineRef.current && typeof engineRef.current.teleportPlayer === 'function') {
+      engineRef.current.teleportPlayer(targetX, targetY);
+      setPlayerPos({
+        x: Math.round(engineRef.current.player.x),
+        y: Math.round(engineRef.current.player.y)
+      });
+    }
+  };
+
   return (
     <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'hidden' }}>
       <canvas
@@ -226,7 +236,7 @@ const GameCanvas = ({ onInteract }) => {
           imageRendering: 'pixelated', // crisp look
         }}
       />
-      <MapOverlay playerPos={playerPos} />
+      <MapOverlay playerPos={playerPos} onTeleport={handleTeleport} />
     </div>
   );
 };

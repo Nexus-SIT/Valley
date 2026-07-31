@@ -1,112 +1,389 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 
 const MAP_SIZE = 2000;
 
-// Coordinate calibration: maps character game coordinates (0-2000) to visual paths in campus_map.jpeg
+// Coordinate calibration: 1:1 direct mapping from game engine (0-2000) to visual campus_map.png
 const mapCoordinates = (x, y) => {
-  let rx;
-  let ry;
-
-  // X Coordinate Calibration
-  if (x <= 300) {
-    // Map left path: from game x=0..300 to image x=150..510
-    rx = 150 + (x / 300) * 360;
-  } else if (x > 300 && x <= 940) {
-    // Map middle path: from game x=300..940 to image x=510..1010
-    rx = 510 + ((x - 300) / 640) * 500;
-  } else {
-    // Map right path: from game x=940..2000 to image x=1010..1800
-    rx = 1010 + ((x - 940) / 1060) * 790;
-  }
-
-  // Y Coordinate Calibration
-  if (y <= 560) {
-    // Map top path: from game y=0..560 to image y=150..700
-    ry = 150 + (y / 560) * 550;
-  } else if (y > 560 && y <= 950) {
-    // Map middle path: from game y=560..950 to image y=700..1050
-    ry = 700 + ((y - 560) / 390) * 350;
-  } else {
-    // Map bottom path: from game y=950..2000 to image y=1050..1800
-    ry = 1050 + ((y - 950) / 1050) * 750;
-  }
-
-  return { x: Math.round(rx), y: Math.round(ry) };
+  return { x: Math.round(x), y: Math.round(y) };
 };
 
-// List of all 20 buildings with custom coordinates matching their locations in campus_map.png
+// List of all 21 buildings with pixel-accurate polygon & roof boundaries matching GIS annotation style
 const BUILDINGS = [
-  { id: 1, name: 'Administrative block', desc: 'The central administrative office and reception headquarters.', x: 330, y: 970, w: 180, h: 720, shape: 'rect' },
-  { id: 2, name: 'Academic block I', desc: 'Main academic building housing large lecture halls and faculty chambers.', x: 140, y: 968, w: 190, h: 510, shape: 'rect' },
-  { id: 3, name: 'Srinivas institute of nursing sciences', desc: 'State-of-the-art training labs and classrooms for nursing education.', x: 439, y: 1717, w: 500, h: 160, shape: 'rect' },
-  { id: 4, name: 'Srinivas college of pharmacy (NEXUS)', desc: 'Interactive classrooms and research labs for pharmaceutical sciences. This building houses the NEXUS Headquarters. Walk to the entrance and press SPACE or E in the game to access the central terminal.', x: 139, y: 759, w: 860, h: 180, shape: 'rect' },
-  { id: 5, name: 'Academic block IV', desc: 'Advanced lecture halls and specialized research departments.', x: 1107, y: 948, w: 240, h: 170, shape: 'rect' },
-  { id: 6, name: 'Academic block II', desc: 'Computing facilities, main server room, and software labs.', x: 250, y: 190, w: 120, h: 440, shape: 'rect' },
-  { id: 7, name: 'Academic block III', desc: 'Large lecture halls, seminar rooms, and open courtyard.', x: 609, y: 319, w: 340, h: 320, shape: 'rect' },
-  { id: 8, name: 'Mechanical work shop', desc: 'Heavy machinery, casting, and machining workshops.', x: 949, y: 978, w: 90, h: 440, shape: 'rect' },
-  { id: 9, name: 'Automobile lab', desc: 'Hands-on practical workshop featuring engine assemblies and chassis testing.', x: 1830, y: 410, w: 100, h: 220, shape: 'rect' },
-  { id: 10, name: 'Boys hostel', desc: 'Residential halls, dining mess, and lounges for male students.', x: 1451, y: 340, w: 380, h: 540, shape: 'rect' },
-  { id: 11, name: 'Girls hostel', desc: 'Secure residential block with modern amenities and gardens for female students.', x: 120, y: 460, w: 120, h: 120, shape: 'rect' },
-  { id: 12, name: 'Meditation center', desc: 'A quiet, peaceful pavilion designated for yoga and mindfulness.', x: 601, y: 700, w: 110, h: 100, shape: 'rect' },
-  { id: 13, name: 'Priest quarters', desc: 'Living quarters for the temple priests and maintenance staff.', x: 1010, y: 1799, w: 70, h: 100, shape: 'rect' },
-  { id: 14, name: 'Srinivasa temple', desc: 'Traditional temple offering a spiritual haven and cultural center on campus.', x: 750, y: 700, w: 110, h: 100, shape: 'rect' },
-  { id: 15, name: 'ATM', desc: '24/7 banking kiosk for cash withdrawals and basic banking services.', x: 950, y: 760, w: 60, h: 60, shape: 'rect' },
-  { id: 16, name: 'College ground', desc: 'Large athletic turf with a standard running track and football field.', cx: 1459, cy: 1540, rx: 380, ry: 220, shape: 'oval' },
-  { id: 17, name: 'Post office', desc: 'Local post branch for campus mailing, packages, and logistics.', x: 180, y: 1509, w: 160, h: 100, shape: 'rect' },
-  { id: 18, name: 'Generator room', desc: 'High-capacity generator facility supplying uninterrupted backup power.', x: 1839, y: 200, w: 100, h: 100, shape: 'rect' },
-  { id: 19, name: 'Parking area', desc: 'Spacious vehicle parking slots for students, staff, and visitors.', x: 1140, y: 600, w: 220, h: 210, shape: 'rect' },
-  { id: 20, name: 'Sewage treatment plant', desc: 'Eco-friendly water processing unit ensuring sustainable campus waste management.', x: 1034, y: 159, w: 140, h: 150, shape: 'rect' },
-  { id: 21, name: 'Garden', desc: 'A beautifully landscaped garden area providing a serene green environment at the heart of the campus, ideal for relaxation and outdoor study.', x: 510, y: 920, w: 420, h: 180, shape: 'rect' }
+  { 
+    id: 1, 
+    name: 'Administrative block', 
+    category: 'admin', 
+    desc: 'The central administrative office and reception headquarters.', 
+    shape: 'polygon', 
+    points: '416,1014 498,1014 498,1718 416,1718',
+    x: 416, y: 1014, w: 82, h: 704, 
+    gameX: 350, gameY: 950 
+  },
+  { 
+    id: 2, 
+    name: 'Academic block I', 
+    category: 'academic', 
+    desc: 'Main academic building housing large lecture halls and faculty chambers.', 
+    shape: 'polygon', 
+    points: '262,1014 435,1014 435,1145 345,1145 345,1477 262,1477',
+    x: 262, y: 1014, w: 173, h: 463,
+    gameX: 100, gameY: 1000 
+  },
+  { 
+    id: 3, 
+    name: 'Srinivas institute of nursing sciences', 
+    category: 'academic', 
+    desc: 'State-of-the-art training labs and classrooms for nursing education.', 
+    shape: 'polygon',
+    points: '429,1678 849,1678 849,1875 429,1875',
+    x: 429, y: 1678, w: 420, h: 197, 
+    gameX: 650, gameY: 1620 
+  },
+  { 
+    id: 4, 
+    name: 'Srinivas college of pharmacy (NEXUS)', 
+    category: 'academic', 
+    desc: 'Interactive classrooms and research labs for pharmaceutical sciences. This building houses the NEXUS Headquarters. Walk to the entrance and press SPACE or E in the game to access the central terminal.', 
+    shape: 'polygon',
+    points: '241,815 938,815 938,984 241,984',
+    x: 241, y: 815, w: 697, h: 169, 
+    gameX: 550, gameY: 700, 
+    isNexus: true 
+  },
+  { 
+    id: 5, 
+    name: 'Academic block IV', 
+    category: 'academic', 
+    desc: 'Advanced lecture halls and specialized research departments.', 
+    shape: 'polygon',
+    points: '1013,967 1172,967 1172,1086 1013,1086',
+    x: 1013, y: 967, w: 159, h: 119, 
+    gameX: 950, gameY: 750 
+  },
+  { 
+    id: 6, 
+    name: 'Academic block II', 
+    category: 'academic', 
+    desc: 'Computing facilities, main server room, and software labs.', 
+    shape: 'polygon',
+    points: '1180,317 1434,317 1434,802 1180,802',
+    x: 1180, y: 317, w: 254, h: 485, 
+    gameX: 1100, gameY: 400 
+  },
+  { 
+    id: 7, 
+    name: 'Academic block III', 
+    category: 'academic', 
+    desc: 'Large lecture halls, seminar rooms, and open courtyard.', 
+    shape: 'polygon',
+    points: '617,345 850,345 850,624 617,624',
+    x: 617, y: 345, w: 233, h: 279, 
+    gameX: 560, gameY: 300 
+  },
+  { 
+    id: 8, 
+    name: 'Mechanical work shop', 
+    category: 'academic', 
+    desc: 'Heavy machinery, casting, and machining workshops.', 
+    shape: 'polygon',
+    points: '1201,948 1501,948 1501,1033 1201,1033',
+    x: 1201, y: 948, w: 300, h: 85, 
+    gameX: 1350, gameY: 670 
+  },
+  { 
+    id: 9, 
+    name: 'Automobile lab', 
+    category: 'academic', 
+    desc: 'Hands-on practical workshop featuring engine assemblies and chassis testing.', 
+    shape: 'polygon',
+    points: '1462,398 1540,398 1540,607 1462,607',
+    x: 1462, y: 398, w: 78, h: 209, 
+    gameX: 1420, gameY: 300 
+  },
+  { 
+    id: 10, 
+    name: 'Boys hostel', 
+    category: 'hostel', 
+    desc: 'Residential halls, dining mess, and lounges for male students.', 
+    shape: 'polygon', 
+    points: '1680,664 1882,800 1740,1052 1586,916',
+    x: 1586, y: 664, w: 296, h: 388,
+    gameX: 1500, gameY: 700 
+  },
+  { 
+    id: 11, 
+    name: 'Girls hostel', 
+    category: 'hostel', 
+    desc: 'Secure residential block with modern amenities and gardens for female students.', 
+    shape: 'polygon',
+    points: '268,328 643,328 643,662 268,662',
+    x: 268, y: 328, w: 375, h: 334, 
+    gameX: 540, gameY: 300 
+  },
+  { 
+    id: 12, 
+    name: 'Meditation center', 
+    category: 'spiritual', 
+    desc: 'A quiet, peaceful pavilion designated for yoga and mindfulness.', 
+    shape: 'polygon',
+    points: '1006,902 1166,902 1166,927 1006,927',
+    x: 1006, y: 902, w: 160, h: 25, 
+    gameX: 950, gameY: 620 
+  },
+  { 
+    id: 13, 
+    name: 'Priest quarters', 
+    category: 'spiritual', 
+    desc: 'Living quarters for the temple priests and maintenance staff.', 
+    shape: 'polygon',
+    points: '702,692 904,692 904,749 702,749',
+    x: 702, y: 692, w: 202, h: 57, 
+    gameX: 600, gameY: 500 
+  },
+  { 
+    id: 14, 
+    name: 'Srinivasa temple', 
+    category: 'spiritual', 
+    desc: 'Traditional temple offering a spiritual haven and cultural center on campus.', 
+    shape: 'polygon',
+    points: '899,1005 970,1005 970,1460 899,1460',
+    x: 899, y: 1005, w: 71, h: 455, 
+    gameX: 880, gameY: 1000 
+  },
+  { 
+    id: 15, 
+    name: 'ATM', 
+    category: 'amenities', 
+    desc: '24/7 banking kiosk for cash withdrawals and basic banking services.', 
+    shape: 'polygon',
+    points: '946,1754 1013,1754 1013,1896 946,1896',
+    x: 946, y: 1754, w: 67, h: 142, 
+    gameX: 970, gameY: 1700 
+  },
+  { 
+    id: 16, 
+    name: 'College ground', 
+    category: 'sports', 
+    desc: 'Large athletic turf with a standard running track and football field.', 
+    cx: 1460, cy: 1540, rx: 390, ry: 240, 
+    shape: 'oval', 
+    gameX: 1200, gameY: 1400 
+  },
+  { 
+    id: 17, 
+    name: 'Post office', 
+    category: 'amenities', 
+    desc: 'Local post branch for campus mailing, packages, and logistics.', 
+    shape: 'polygon',
+    points: '335,1810 416,1810 416,1915 335,1915',
+    x: 335, y: 1810, w: 81, h: 105, 
+    gameX: 320, gameY: 1780 
+  },
+  { 
+    id: 18, 
+    name: 'Generator room', 
+    category: 'amenities', 
+    desc: 'High-capacity generator facility supplying uninterrupted backup power.', 
+    shape: 'polygon',
+    points: '262,1725 349,1725 349,1839 262,1839',
+    x: 262, y: 1725, w: 87, h: 114, 
+    gameX: 230, gameY: 1700 
+  },
+  { 
+    id: 19, 
+    name: 'Parking area', 
+    category: 'amenities', 
+    desc: 'Spacious vehicle parking slots for students, staff, and visitors.', 
+    shape: 'polygon',
+    points: '180,1510 270,1510 270,1640 180,1640',
+    x: 180, y: 1510, w: 90, h: 130, 
+    gameX: 150, gameY: 1500 
+  },
+  { 
+    id: 20, 
+    name: 'Sewage treatment plant', 
+    category: 'amenities', 
+    desc: 'Eco-friendly water processing unit ensuring sustainable campus waste management.', 
+    shape: 'polygon',
+    points: '966,38 1046,38 1046,171 966,171',
+    x: 966, y: 38, w: 80, h: 133, 
+    gameX: 920, gameY: 100 
+  },
+  { 
+    id: 21, 
+    name: 'Garden', 
+    category: 'amenities', 
+    desc: 'A beautifully landscaped garden area providing a serene green environment at the heart of the campus, ideal for relaxation and outdoor study.', 
+    shape: 'polygon',
+    points: '570,1020 880,1020 880,1590 570,1590',
+    x: 570, y: 1020, w: 310, h: 570, 
+    gameX: 720, gameY: 1100 
+  }
 ];
 
-const MapOverlay = ({ playerPos }) => {
+const CATEGORIES = [
+  { id: 'all', label: 'All' },
+  { id: 'academic', label: 'Academic' },
+  { id: 'hostel', label: 'Hostels' },
+  { id: 'spiritual', label: 'Spiritual' },
+  { id: 'amenities', label: 'Amenities' },
+  { id: 'sports_admin', label: 'Admin & Sports' }
+];
+
+const MapOverlay = ({ playerPos, onTeleport }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedBuilding, setSelectedBuilding] = useState(null);
+  const [hoveredBuilding, setHoveredBuilding] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState('all');
   const [showFullLegend, setShowFullLegend] = useState(false);
   const [activeTab, setActiveTab] = useState('inspect'); // 'inspect' or 'directory'
+  const [teleportToast, setTeleportToast] = useState(null);
+  const [waypointBuilding, setWaypointBuilding] = useState(null);
+
+  // Pan & Zoom State for the Modal Map Viewport
+  const [zoomScale, setZoomScale] = useState(1);
+  const [zoomPan, setZoomPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
+  const mapViewportRef = useRef(null);
 
   // Calibrate player coordinates to align with campus_map.png
   const calibratedPos = useMemo(() => {
     return mapCoordinates(playerPos.x, playerPos.y);
   }, [playerPos]);
 
-  // Calculate scrolling minimap viewBox centered on the player's calibrated coordinates
+  // Minimap scrolling viewbox
   const miniViewBox = useMemo(() => {
-    const size = 600; // view size in map coordinate units
+    const size = 600;
     let vx = calibratedPos.x - size / 2;
     let vy = calibratedPos.y - size / 2;
-    // Clamp to map boundaries
     vx = Math.max(0, Math.min(vx, MAP_SIZE - size));
     vy = Math.max(0, Math.min(vy, MAP_SIZE - size));
     return `${vx} ${vy} ${size} ${size}`;
   }, [calibratedPos]);
 
-  // Filter buildings based on search query
+  // Filter buildings based on search query and active category chip
   const filteredBuildings = useMemo(() => {
-    if (!searchQuery) return BUILDINGS;
-    return BUILDINGS.filter(b => 
-      b.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      b.id.toString() === searchQuery.trim()
-    );
-  }, [searchQuery]);
+    return BUILDINGS.filter(b => {
+      const matchesSearch = !searchQuery || 
+        b.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        b.id.toString() === searchQuery.trim();
+      const matchesCategory = activeCategory === 'all' || 
+        (activeCategory === 'sports_admin' ? (b.category === 'sports' || b.category === 'admin') : b.category === activeCategory);
+      return matchesSearch && matchesCategory;
+    });
+  }, [searchQuery, activeCategory]);
 
-  // Render transparent interactive building hotspots
+  // Auto focus & zoom map view on a targeted building
+  const focusBuildingOnMap = (b) => {
+    if (!b) return;
+    const targetX = b.shape === 'oval' ? b.cx : b.x + (b.w ? b.w / 2 : 0);
+    const targetY = b.shape === 'oval' ? b.cy : b.y + (b.h ? b.h / 2 : 0);
+
+    const containerW = mapViewportRef.current ? mapViewportRef.current.clientWidth : 600;
+    const containerH = mapViewportRef.current ? mapViewportRef.current.clientHeight : 600;
+
+    const targetScale = 2.2;
+    const panX = (containerW / 2) - (targetX / MAP_SIZE) * containerW * targetScale;
+    const panY = (containerH / 2) - (targetY / MAP_SIZE) * containerH * targetScale;
+
+    setZoomScale(targetScale);
+    setZoomPan({ x: panX, y: panY });
+  };
+
+  const handleSelectBuilding = (b) => {
+    setSelectedBuilding(b);
+    setActiveTab('inspect');
+    focusBuildingOnMap(b);
+  };
+
+  const resetMapZoom = () => {
+    setZoomScale(1);
+    setZoomPan({ x: 0, y: 0 });
+  };
+
+  // Mouse wheel zoom
+  const handleWheel = (e) => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.25 : -0.25;
+    setZoomScale(prev => {
+      const next = Math.max(1, Math.min(prev + delta, 4));
+      if (next === 1) setZoomPan({ x: 0, y: 0 });
+      return next;
+    });
+  };
+
+  // Drag panning handlers
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return;
+    setIsDragging(true);
+    setDragStart({ x: e.clientX - zoomPan.x, y: e.clientY - zoomPan.y });
+  };
+
+  const handleMouseMove = (e) => {
+    if (mapViewportRef.current) {
+      const rect = mapViewportRef.current.getBoundingClientRect();
+      setTooltipPos({
+        x: e.clientX - rect.left + 15,
+        y: e.clientY - rect.top - 10
+      });
+    }
+
+    if (!isDragging) return;
+    setZoomPan({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Fast Travel Teleport
+  const triggerTeleport = (b) => {
+    if (!b || typeof onTeleport !== 'function') return;
+    onTeleport(b.gameX, b.gameY);
+    setTeleportToast(`⚡ Teleported to ${b.name}!`);
+    setTimeout(() => setTeleportToast(null), 3000);
+  };
+
+  // Render pixel-accurate GIS style building outlines
   const renderBuildingHotspot = (b, isInteractive) => {
     const isSelected = selectedBuilding?.id === b.id;
+    const isHovered = hoveredBuilding?.id === b.id;
+
+    // Professional GIS style outlines (tight red/cyan stroke)
+    const strokeColor = isSelected ? '#ff3366' : isHovered ? '#60efff' : 'rgba(255, 51, 102, 0.7)';
+    const strokeWidth = isSelected || isHovered ? 2.5 : 1.5;
+    const fillColor = isSelected ? 'rgba(255, 51, 102, 0.28)' : isHovered ? 'rgba(96, 239, 255, 0.22)' : 'rgba(255, 51, 102, 0.06)';
+
     const highlightProps = isInteractive ? {
-      style: { cursor: 'pointer', transition: 'fill 0.2s, stroke 0.2s' },
-      fill: isSelected ? 'rgba(96, 239, 255, 0.25)' : 'rgba(96, 239, 255, 0.0)',
-      stroke: isSelected ? '#60efff' : 'rgba(96, 239, 255, 0.0)',
-      strokeWidth: 3,
-      onClick: () => {
-        setSelectedBuilding(b);
-        setActiveTab('inspect');
-      }
+      style: { cursor: 'pointer', transition: 'fill 0.2s, stroke 0.2s, stroke-width 0.2s' },
+      fill: fillColor,
+      stroke: strokeColor,
+      strokeWidth: strokeWidth,
+      onClick: () => handleSelectBuilding(b),
+      onMouseEnter: () => setHoveredBuilding(b),
+      onMouseLeave: () => setHoveredBuilding(null)
     } : {
       fill: 'none',
       stroke: 'none'
     };
+
+    if (b.shape === 'polygon') {
+      return (
+        <polygon
+          key={b.id}
+          points={b.points}
+          {...highlightProps}
+          className="map-building-hotspot"
+        />
+      );
+    }
 
     if (b.shape === 'oval') {
       return (
@@ -129,36 +406,38 @@ const MapOverlay = ({ playerPos }) => {
         y={b.y}
         width={b.w}
         height={b.h}
-        rx={6}
-        ry={6}
+        rx={3}
+        ry={3}
         {...highlightProps}
         className="map-building-hotspot"
       />
     );
   };
 
-  // Render building number badges at their centers
+  // Render building number badges at their exact centers
   const renderBuildingNumber = (b, isInteractive) => {
-    let textX = b.x + b.w / 2;
-    let textY = b.y + b.h / 2 + 5;
+    let textX = b.x + (b.w ? b.w / 2 : 0);
+    let textY = b.y + (b.h ? b.h / 2 : 0) + 5;
     
     if (b.shape === 'oval') {
       textX = b.cx;
       textY = b.cy + 5;
+    } else if (b.id === 10) { // Boys hostel center
+      textX = 1740;
+      textY = 725;
     }
 
     const isSelected = selectedBuilding?.id === b.id;
+    const isHovered = hoveredBuilding?.id === b.id;
 
     return (
       <g 
         key={`num-${b.id}`} 
         style={isInteractive ? { cursor: 'pointer' } : { pointerEvents: 'none' }}
-        onClick={isInteractive ? () => {
-          setSelectedBuilding(b);
-          setActiveTab('inspect');
-        } : undefined}
+        onClick={isInteractive ? () => handleSelectBuilding(b) : undefined}
+        onMouseEnter={isInteractive ? () => setHoveredBuilding(b) : undefined}
+        onMouseLeave={isInteractive ? () => setHoveredBuilding(null) : undefined}
       >
-        {/* Invisible larger click target circle to make clicking extremely easy */}
         {isInteractive && (
           <circle 
             cx={textX} 
@@ -170,17 +449,17 @@ const MapOverlay = ({ playerPos }) => {
         <circle 
           cx={textX} 
           cy={textY - 5} 
-          r={13} 
-          fill={isSelected ? '#ff3366' : 'rgba(0, 0, 0, 0.75)'} 
+          r={isSelected || isHovered ? 15 : 13} 
+          fill={isSelected ? '#ff3366' : isHovered ? '#0061ff' : 'rgba(0, 0, 0, 0.85)'} 
           stroke="#fff" 
-          strokeWidth={isSelected ? 2 : 1} 
-          style={{ transition: 'fill 0.2s, stroke-width 0.2s' }}
+          strokeWidth={isSelected || isHovered ? 2.5 : 1} 
+          style={{ transition: 'fill 0.2s, r 0.2s, stroke-width 0.2s' }}
         />
         <text
           x={textX}
           y={textY - 1}
           fill="#fff"
-          fontSize="11"
+          fontSize={isSelected || isHovered ? "12" : "11"}
           fontWeight="bold"
           textAnchor="middle"
           fontFamily="Inter, sans-serif"
@@ -195,40 +474,32 @@ const MapOverlay = ({ playerPos }) => {
   const renderSvgContent = (isInteractive) => {
     return (
       <>
-        {/* 1. Base Image Map */}
+        {/* Base Image Map */}
         <image href="/campus_map.png" x="0" y="0" width={MAP_SIZE} height={MAP_SIZE} />
 
-        {/* 2. Interactive Building Overlays */}
+        {/* Interactive Building Overlays */}
         {BUILDINGS.map(b => renderBuildingHotspot(b, isInteractive))}
 
-        {/* 3. Number Labels */}
+        {/* Number Labels */}
         {BUILDINGS.map(b => renderBuildingNumber(b, isInteractive))}
 
-        {/* 4. Pinpoint Marker for Selected Building */}
+        {/* Pinpoint Marker for Selected Building */}
         {isInteractive && selectedBuilding && (
           (() => {
-            let pinX = selectedBuilding.x + selectedBuilding.w / 2;
-            let pinY = selectedBuilding.y + selectedBuilding.h / 2;
-            if (selectedBuilding.shape === 'oval') {
-              pinX = selectedBuilding.cx;
-              pinY = selectedBuilding.cy;
-            }
+            let pinX = selectedBuilding.shape === 'oval' ? selectedBuilding.cx : selectedBuilding.x + (selectedBuilding.w ? selectedBuilding.w / 2 : 0);
+            let pinY = selectedBuilding.shape === 'oval' ? selectedBuilding.cy : selectedBuilding.y + (selectedBuilding.h ? selectedBuilding.h / 2 : 0);
+            if (selectedBuilding.id === 10) { pinX = 1740; pinY = 720; }
             return (
               <g key="selected-pin" style={{ pointerEvents: 'none' }}>
-                {/* Pulsating outer ring */}
-                <circle cx={pinX} cy={pinY} r={16} fill="none" stroke="#ff3366" strokeWidth={3} className="pulsing-ring" />
-                {/* Inner pin shadow */}
-                <ellipse cx={pinX} cy={pinY + 2} rx={6} ry={2} fill="rgba(0,0,0,0.3)" />
-                {/* Bouncing Pin Group */}
+                <circle cx={pinX} cy={pinY} r={18} fill="none" stroke="#ff3366" strokeWidth={3} className="pulsing-ring" />
+                <ellipse cx={pinX} cy={pinY + 2} rx={7} ry={2.5} fill="rgba(0,0,0,0.3)" />
                 <g className="bouncing-pin">
-                  {/* Teardrop Pin Marker */}
                   <path
                     d={`M ${pinX} ${pinY} C ${pinX - 10} ${pinY - 10} ${pinX - 10} ${pinY - 26} ${pinX} ${pinY - 26} C ${pinX + 10} ${pinY - 26} ${pinX + 10} ${pinY - 10} ${pinX} ${pinY} Z`}
                     fill="#ff3366"
                     stroke="#fff"
                     strokeWidth={1.5}
                   />
-                  {/* Dot inside the pin */}
                   <circle cx={pinX} cy={pinY - 17} r={3.5} fill="#fff" />
                 </g>
               </g>
@@ -236,7 +507,22 @@ const MapOverlay = ({ playerPos }) => {
           })()
         )}
 
-        {/* 5. Calibrated Player Character Marker */}
+        {/* Waypoint Marker */}
+        {isInteractive && waypointBuilding && waypointBuilding.id !== selectedBuilding?.id && (
+          (() => {
+            const wpX = waypointBuilding.shape === 'oval' ? waypointBuilding.cx : waypointBuilding.x + (waypointBuilding.w ? waypointBuilding.w / 2 : 0);
+            const wpY = waypointBuilding.shape === 'oval' ? waypointBuilding.cy : waypointBuilding.y + (waypointBuilding.h ? waypointBuilding.h / 2 : 0);
+            return (
+              <g key="waypoint-pin" style={{ pointerEvents: 'none' }}>
+                <circle cx={wpX} cy={wpY} r={14} fill="none" stroke="#60efff" strokeWidth={2} className="pulsing-ring" />
+                <circle cx={wpX} cy={wpY} r={6} fill="#60efff" stroke="#fff" strokeWidth={1} />
+                <text x={wpX} y={wpY - 12} fill="#60efff" fontSize="9" fontWeight="bold" textAnchor="middle" fontFamily="Inter, sans-serif">WAYPOINT</text>
+              </g>
+            );
+          })()
+        )}
+
+        {/* Calibrated Player Character Marker */}
         {calibratedPos && (
           <g key="player-marker">
             <circle cx={calibratedPos.x} cy={calibratedPos.y} r={28} fill="#ffeb3b" opacity={0.35}>
@@ -258,7 +544,8 @@ const MapOverlay = ({ playerPos }) => {
       <div 
         style={styles.miniMapWrapper}
         onClick={() => setIsOpen(true)}
-        title="Click to expand map"
+        className="hud-minimap-btn"
+        title="Click to open Interactive Campus Map"
       >
         <svg 
           viewBox={miniViewBox}
@@ -268,7 +555,7 @@ const MapOverlay = ({ playerPos }) => {
         </svg>
         <div style={styles.miniMapOverlay}>
           <span style={styles.miniMapLabel}>MAP</span>
-          <span style={styles.miniMapExpandHint}>CLICK</span>
+          <span style={styles.miniMapExpandHint}>CLICK 🗺️</span>
         </div>
       </div>
 
@@ -281,35 +568,106 @@ const MapOverlay = ({ playerPos }) => {
             <div style={styles.modalHeader}>
               <div style={styles.modalTitleArea}>
                 <h2 style={styles.modalTitle}>Srinivas Institute of Technology</h2>
-                <p style={styles.modalSubtitle}>Valachil Campus Map & Directory</p>
+                <p style={styles.modalSubtitle}>Valachil Campus Map & Interactive GIS Building Directory</p>
               </div>
               <div style={styles.headerButtons}>
                 <button 
                   style={styles.infoButton} 
+                  className="modal-action-btn"
                   onClick={() => setShowFullLegend(true)}
-                  title="Display full building list"
+                  title="Display full building reference"
                 >
-                  ℹ️ Campus Info
+                  📋 Directory Table
                 </button>
-                <button style={styles.closeButton} onClick={() => setIsOpen(false)}>
+                <button 
+                  style={styles.closeButton}
+                  className="modal-close-btn"
+                  onClick={() => setIsOpen(false)}
+                >
                   &times;
                 </button>
               </div>
             </div>
 
-            {/* Modal Main Area */}
+            {/* Toast Notice */}
+            {teleportToast && (
+              <div style={styles.toastNotice}>
+                {teleportToast}
+              </div>
+            )}
+
+            {/* Modal Main Body */}
             <div style={styles.modalBody}>
-              {/* Map (Left) — <img> for reliable display + SVG overlay for interactivity */}
-              <div style={styles.mapContainer}>
-                <div style={styles.mapInner}>
-                  {/* Background map image */}
+              {/* Map (Left) - Interactive Viewport with Pan & Zoom */}
+              <div 
+                ref={mapViewportRef}
+                style={{
+                  ...styles.mapContainer,
+                  cursor: isDragging ? 'grabbing' : 'grab'
+                }}
+                onWheel={handleWheel}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+              >
+                {/* Zoom Controls Floating Toolbar */}
+                <div style={styles.zoomControls}>
+                  <button 
+                    className="zoom-btn"
+                    style={styles.zoomBtn} 
+                    onClick={() => setZoomScale(prev => Math.min(prev + 0.3, 4))}
+                    title="Zoom In"
+                  >
+                    +
+                  </button>
+                  <button 
+                    className="zoom-btn"
+                    style={styles.zoomBtn} 
+                    onClick={() => setZoomScale(prev => {
+                      const next = Math.max(prev - 0.3, 1);
+                      if (next === 1) setZoomPan({ x: 0, y: 0 });
+                      return next;
+                    })}
+                    title="Zoom Out"
+                  >
+                    −
+                  </button>
+                  <button 
+                    className="zoom-btn"
+                    style={styles.zoomResetBtn} 
+                    onClick={resetMapZoom}
+                    title="Reset Zoom & Pan"
+                  >
+                    Reset
+                  </button>
+                  {selectedBuilding && (
+                    <button 
+                      className="zoom-btn"
+                      style={styles.zoomFocusBtn} 
+                      onClick={() => focusBuildingOnMap(selectedBuilding)}
+                      title="Focus on Selected Building"
+                    >
+                      🎯 Focus #{selectedBuilding.id}
+                    </button>
+                  )}
+                </div>
+
+                {/* Map Scaled Content Box */}
+                <div 
+                  style={{
+                    ...styles.mapInner,
+                    transform: `translate(${zoomPan.x}px, ${zoomPan.y}px) scale(${zoomScale})`,
+                    transformOrigin: '0 0',
+                    transition: isDragging ? 'none' : 'transform 0.15s ease-out'
+                  }}
+                >
                   <img
                     src="/campus_map.png"
                     alt="SIT Valachil Campus Map"
                     style={styles.mapImage}
                     draggable={false}
                   />
-                  {/* Interactive SVG overlay – hotspots, badges, pin, player */}
                   <svg
                     viewBox={`0 0 ${MAP_SIZE} ${MAP_SIZE}`}
                     preserveAspectRatio="none"
@@ -318,12 +676,13 @@ const MapOverlay = ({ playerPos }) => {
                     {BUILDINGS.map(b => renderBuildingHotspot(b, true))}
                     {BUILDINGS.map(b => renderBuildingNumber(b, true))}
                     {selectedBuilding && (() => {
-                      const pinX = selectedBuilding.shape === 'oval' ? selectedBuilding.cx : selectedBuilding.x + selectedBuilding.w / 2;
-                      const pinY = selectedBuilding.shape === 'oval' ? selectedBuilding.cy : selectedBuilding.y + selectedBuilding.h / 2;
+                      let pinX = selectedBuilding.shape === 'oval' ? selectedBuilding.cx : selectedBuilding.x + (selectedBuilding.w ? selectedBuilding.w / 2 : 0);
+                      let pinY = selectedBuilding.shape === 'oval' ? selectedBuilding.cy : selectedBuilding.y + (selectedBuilding.h ? selectedBuilding.h / 2 : 0);
+                      if (selectedBuilding.id === 10) { pinX = 1740; pinY = 720; }
                       return (
                         <g key="selected-pin" style={{ pointerEvents: 'none' }}>
-                          <circle cx={pinX} cy={pinY} r={16} fill="none" stroke="#ff3366" strokeWidth={3} className="pulsing-ring" />
-                          <ellipse cx={pinX} cy={pinY + 2} rx={6} ry={2} fill="rgba(0,0,0,0.3)" />
+                          <circle cx={pinX} cy={pinY} r={18} fill="none" stroke="#ff3366" strokeWidth={3} className="pulsing-ring" />
+                          <ellipse cx={pinX} cy={pinY + 2} rx={7} ry={2.5} fill="rgba(0,0,0,0.3)" />
                           <g className="bouncing-pin">
                             <path d={`M ${pinX} ${pinY} C ${pinX-10} ${pinY-10} ${pinX-10} ${pinY-26} ${pinX} ${pinY-26} C ${pinX+10} ${pinY-26} ${pinX+10} ${pinY-10} ${pinX} ${pinY} Z`} fill="#ff3366" stroke="#fff" strokeWidth={1.5} />
                             <circle cx={pinX} cy={pinY - 17} r={3.5} fill="#fff" />
@@ -344,15 +703,29 @@ const MapOverlay = ({ playerPos }) => {
                     )}
                   </svg>
                 </div>
+
+                {/* Floating Hover Tooltip */}
+                {hoveredBuilding && (
+                  <div 
+                    style={{
+                      ...styles.floatingTooltip,
+                      left: tooltipPos.x,
+                      top: tooltipPos.y
+                    }}
+                  >
+                    <span style={styles.tooltipBadge}>{hoveredBuilding.id}</span>
+                    <span style={styles.tooltipName}>{hoveredBuilding.name}</span>
+                  </div>
+                )}
               </div>
 
               {/* Sidebar directory (Right) */}
               <div style={styles.sidebar}>
-                {/* Search input */}
+                {/* Search box */}
                 <div style={styles.searchBox}>
                   <input 
                     type="text" 
-                    placeholder="Search buildings (name or number)..."
+                    placeholder="Search buildings (name or #)..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     style={styles.searchInput}
@@ -362,43 +735,100 @@ const MapOverlay = ({ playerPos }) => {
                   )}
                 </div>
 
+                {/* Category Chips */}
+                <div style={styles.categoryChipsContainer}>
+                  {CATEGORIES.map(cat => (
+                    <button
+                      key={cat.id}
+                      style={{
+                        ...styles.categoryChip,
+                        backgroundColor: activeCategory === cat.id ? '#60efff' : 'rgba(255,255,255,0.06)',
+                        color: activeCategory === cat.id ? '#0a0e17' : 'rgba(255,255,255,0.7)',
+                        fontWeight: activeCategory === cat.id ? 'bold' : 'normal'
+                      }}
+                      onClick={() => setActiveCategory(cat.id)}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </div>
+
                 {/* Tabs */}
                 <div style={styles.tabContainer}>
                   <button 
                     style={activeTab === 'inspect' ? styles.activeTabBtn : styles.tabBtn} 
                     onClick={() => setActiveTab('inspect')}
                   >
-                    Inspect
+                    Inspect Building
                   </button>
                   <button 
                     style={activeTab === 'directory' ? styles.activeTabBtn : styles.tabBtn} 
                     onClick={() => setActiveTab('directory')}
                   >
-                    Directory ({BUILDINGS.length})
+                    Directory ({filteredBuildings.length})
                   </button>
                 </div>
 
-                {/* Tab content */}
+                {/* Tab Content */}
                 <div style={styles.sidebarContent}>
                   {activeTab === 'inspect' ? (
                     <div style={styles.inspectPanel}>
                       {selectedBuilding ? (
                         <div style={styles.buildingDetailCard}>
                           <div style={styles.cardHeader}>
-                            <span style={styles.buildingBadge}>{selectedBuilding.id}</span>
-                            <h3 style={styles.buildingDetailName}>{selectedBuilding.name}</h3>
+                            <span style={styles.buildingBadge}>#{selectedBuilding.id}</span>
+                            <div>
+                              <h3 style={styles.buildingDetailName}>{selectedBuilding.name}</h3>
+                              <span style={styles.categoryTag}>{selectedBuilding.category.toUpperCase()}</span>
+                            </div>
                           </div>
+
                           <div style={styles.cardDivider} />
+
                           <p style={styles.buildingDetailDesc}>{selectedBuilding.desc}</p>
+
                           <div style={styles.buildingCoordinates}>
                             <span>📍 Map Grid: X={selectedBuilding.x || selectedBuilding.cx}, Y={selectedBuilding.y || selectedBuilding.cy}</span>
+                          </div>
+
+                          {/* Interactive Action Buttons */}
+                          <div style={styles.cardActions}>
+                            <button
+                              style={styles.teleportBtn}
+                              className="teleport-action-btn"
+                              onClick={() => triggerTeleport(selectedBuilding)}
+                            >
+                              ⚡ Fast Travel Teleport
+                            </button>
+
+                            <div style={styles.secondaryActions}>
+                              <button
+                                style={styles.waypointBtn}
+                                className="secondary-action-btn"
+                                onClick={() => {
+                                  setWaypointBuilding(waypointBuilding?.id === selectedBuilding.id ? null : selectedBuilding);
+                                }}
+                              >
+                                {waypointBuilding?.id === selectedBuilding.id ? '📍 Remove Waypoint' : '🎯 Set Waypoint'}
+                              </button>
+
+                              <button
+                                style={styles.focusBtn}
+                                className="secondary-action-btn"
+                                onClick={() => focusBuildingOnMap(selectedBuilding)}
+                              >
+                                🔍 Focus View
+                              </button>
+                            </div>
                           </div>
                         </div>
                       ) : (
                         <div style={styles.emptyInspectState}>
-                          <p>Click any building on the map or select from the Directory to inspect details.</p>
+                          <div style={styles.emptyInspectIcon}>🏛️</div>
+                          <p style={{ margin: '8px 0 0 0', fontWeight: 'bold', color: '#fff' }}>Building Inspection Mode</p>
+                          <p style={{ margin: '4px 0 16px 0' }}>Click any building on the map image or select from the directory list to inspect full details & fast travel.</p>
                           <div style={styles.startingLocationNotice}>
-                            <span>💡 You spawned at: <strong>1. Administrative block</strong></span>
+                            <span>💡 Current Spawn: <strong>#1 Administrative block</strong></span>
                           </div>
                         </div>
                       )}
@@ -408,26 +838,31 @@ const MapOverlay = ({ playerPos }) => {
                       {filteredBuildings.map(b => (
                         <div 
                           key={b.id} 
+                          className="directory-item-row"
                           style={{
                             ...styles.directoryItem,
                             backgroundColor: selectedBuilding?.id === b.id ? 'rgba(96, 239, 255, 0.15)' : 'rgba(255, 255, 255, 0.03)',
                             borderLeftColor: selectedBuilding?.id === b.id ? '#60efff' : 'transparent'
                           }}
-                          onClick={() => {
-                            setSelectedBuilding(b);
-                            setActiveTab('inspect');
-                          }}
+                          onClick={() => handleSelectBuilding(b)}
+                          onMouseEnter={() => setHoveredBuilding(b)}
+                          onMouseLeave={() => setHoveredBuilding(null)}
                         >
                           <span style={styles.directoryBadge}>{b.id}</span>
-                          <span style={styles.directoryName}>{b.name}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={styles.directoryName}>{b.name}</div>
+                            <div style={styles.directorySubtext}>{b.category}</div>
+                          </div>
+                          {b.isNexus && <span style={styles.nexusPill}>NEXUS HQ</span>}
                         </div>
                       ))}
                       {filteredBuildings.length === 0 && (
-                        <p style={styles.noResultsText}>No buildings matching your search.</p>
+                        <p style={styles.noResultsText}>No buildings matching your search/category filter.</p>
                       )}
                     </div>
                   )}
                 </div>
+
               </div>
             </div>
 
@@ -441,7 +876,13 @@ const MapOverlay = ({ playerPos }) => {
           <div style={styles.legendContent} onClick={(e) => e.stopPropagation()}>
             <div style={styles.legendHeader}>
               <h3 style={styles.legendTitle}>Campus Directory Reference</h3>
-              <button style={styles.closeLegendBtn} onClick={() => setShowFullLegend(false)}>&times;</button>
+              <button 
+                style={styles.closeLegendBtn} 
+                className="modal-close-btn"
+                onClick={() => setShowFullLegend(false)}
+              >
+                &times;
+              </button>
             </div>
             <div style={styles.legendBody}>
               <table style={styles.legendTable}>
@@ -449,18 +890,21 @@ const MapOverlay = ({ playerPos }) => {
                   <tr>
                     <th style={styles.thBadge}>#</th>
                     <th style={styles.thName}>Building / Facility Name</th>
+                    <th style={styles.thCategory}>Category</th>
                   </tr>
                 </thead>
                 <tbody>
                   {BUILDINGS.map(b => (
                     <tr 
                       key={b.id} 
+                      className="legend-table-row"
                       style={styles.legendRow}
                       onClick={() => {
-                        setSelectedBuilding(b);
-                        setActiveTab('inspect');
+                        handleSelectBuilding(b);
                         setShowFullLegend(false);
                       }}
+                      onMouseEnter={() => setHoveredBuilding(b)}
+                      onMouseLeave={() => setHoveredBuilding(null)}
                     >
                       <td style={styles.tdBadge}>
                         <span style={styles.tableBadge}>{b.id}</span>
@@ -468,6 +912,9 @@ const MapOverlay = ({ playerPos }) => {
                       <td style={styles.tdName}>
                         <div style={styles.tableName}>{b.name}</div>
                         <div style={styles.tableDesc}>{b.desc}</div>
+                      </td>
+                      <td style={styles.tdCategory}>
+                        <span style={styles.tableCategoryPill}>{b.category}</span>
                       </td>
                     </tr>
                   ))}
@@ -496,12 +943,7 @@ const styles = {
     cursor: 'pointer',
     zIndex: 99,
     background: '#1a1f2b',
-    transition: 'transform 0.2s, border-color 0.2s',
-    userSelect: 'none',
-    ':hover': {
-      transform: 'scale(1.05)',
-      borderColor: '#60efff'
-    }
+    userSelect: 'none'
   },
   miniMapSvg: {
     width: '100%',
@@ -540,36 +982,36 @@ const styles = {
   modalOverlay: {
     position: 'fixed',
     inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.82)',
+    backgroundColor: 'rgba(0, 0, 0, 0.85)',
     backdropFilter: 'blur(8px)',
     WebkitBackdropFilter: 'blur(8px)',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 100,
-    animation: 'fadeIn 0.25s ease-out'
+    zIndex: 100
   },
   modalContent: {
-    background: 'rgba(23, 28, 41, 0.95)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
+    background: 'rgba(23, 28, 41, 0.96)',
+    border: '1px solid rgba(255, 255, 255, 0.12)',
     borderRadius: '24px',
-    boxShadow: '0 24px 64px rgba(0, 0, 0, 0.6)',
-    width: '92vw',
-    height: '88vh',
-    maxWidth: '1050px',
-    maxHeight: '750px',
+    boxShadow: '0 24px 64px rgba(0, 0, 0, 0.75)',
+    width: '94vw',
+    height: '90vh',
+    maxWidth: '1100px',
+    maxHeight: '800px',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
-    fontFamily: "'Inter', sans-serif"
+    fontFamily: "'Inter', sans-serif",
+    position: 'relative'
   },
   modalHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '20px 24px',
+    padding: '16px 24px',
     borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-    background: 'rgba(15, 20, 31, 0.5)'
+    background: 'rgba(15, 20, 31, 0.6)'
   },
   modalTitleArea: {
     display: 'flex',
@@ -577,7 +1019,7 @@ const styles = {
   },
   modalTitle: {
     margin: 0,
-    fontSize: '1.6rem',
+    fontSize: '1.5rem',
     fontWeight: 700,
     fontFamily: "'Outfit', sans-serif",
     background: 'linear-gradient(90deg, #60efff, #0061ff)',
@@ -585,8 +1027,8 @@ const styles = {
     WebkitTextFillColor: 'transparent'
   },
   modalSubtitle: {
-    margin: '4px 0 0 0',
-    fontSize: '0.85rem',
+    margin: '2px 0 0 0',
+    fontSize: '0.82rem',
     color: 'rgba(255, 255, 255, 0.5)'
   },
   headerButtons: {
@@ -599,15 +1041,11 @@ const styles = {
     color: '#60efff',
     border: '1px solid rgba(96, 239, 255, 0.3)',
     borderRadius: '8px',
-    padding: '8px 16px',
+    padding: '8px 14px',
     fontSize: '0.85rem',
     fontWeight: 'bold',
     cursor: 'pointer',
-    transition: 'background 0.2s',
-    fontFamily: "'Inter', sans-serif",
-    ':hover': {
-      background: 'rgba(96, 239, 255, 0.25)'
-    }
+    fontFamily: "'Inter', sans-serif"
   },
   closeButton: {
     background: 'none',
@@ -616,11 +1054,21 @@ const styles = {
     fontSize: '28px',
     cursor: 'pointer',
     padding: '0 4px',
-    lineHeight: 1,
-    transition: 'color 0.2s',
-    ':hover': {
-      color: '#fff'
-    }
+    lineHeight: 1
+  },
+  toastNotice: {
+    position: 'absolute',
+    top: '70px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    background: 'linear-gradient(90deg, #0061ff, #60efff)',
+    color: '#000',
+    fontWeight: 'bold',
+    padding: '8px 20px',
+    borderRadius: '20px',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+    zIndex: 150,
+    fontSize: '0.88rem'
   },
   modalBody: {
     flex: 1,
@@ -630,28 +1078,25 @@ const styles = {
   },
   mapContainer: {
     flex: '1.4',
-    background: '#151922',
+    background: '#121620',
     overflow: 'hidden',
-    padding: '16px',
     position: 'relative',
     display: 'flex',
     justifyContent: 'center',
-    alignItems: 'stretch'
+    alignItems: 'stretch',
+    userSelect: 'none'
   },
   mapInner: {
     position: 'relative',
-    flex: 1,
-    borderRadius: '12px',
-    overflow: 'hidden',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-    border: '1px solid rgba(255, 255, 255, 0.07)'
+    width: '100%',
+    height: '100%'
   },
   mapImage: {
     display: 'block',
     width: '100%',
     height: '100%',
-    objectFit: 'fill',
-    userSelect: 'none'
+    objectFit: 'contain',
+    pointerEvents: 'none'
   },
   mapSvgOverlay: {
     position: 'absolute',
@@ -660,15 +1105,95 @@ const styles = {
     width: '100%',
     height: '100%'
   },
+  zoomControls: {
+    position: 'absolute',
+    bottom: '16px',
+    left: '16px',
+    display: 'flex',
+    gap: '6px',
+    zIndex: 20
+  },
+  zoomBtn: {
+    width: '34px',
+    height: '34px',
+    borderRadius: '8px',
+    background: 'rgba(15, 20, 31, 0.85)',
+    border: '1px solid rgba(255,255,255,0.15)',
+    color: '#fff',
+    fontSize: '18px',
+    fontWeight: 'bold',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    cursor: 'pointer',
+    backdropFilter: 'blur(4px)'
+  },
+  zoomResetBtn: {
+    padding: '0 12px',
+    height: '34px',
+    borderRadius: '8px',
+    background: 'rgba(15, 20, 31, 0.85)',
+    border: '1px solid rgba(255,255,255,0.15)',
+    color: '#60efff',
+    fontSize: '0.78rem',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    backdropFilter: 'blur(4px)'
+  },
+  zoomFocusBtn: {
+    padding: '0 12px',
+    height: '34px',
+    borderRadius: '8px',
+    background: 'rgba(255, 51, 102, 0.2)',
+    border: '1px solid rgba(255, 51, 102, 0.4)',
+    color: '#ff3366',
+    fontSize: '0.78rem',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    backdropFilter: 'blur(4px)'
+  },
+  floatingTooltip: {
+    position: 'absolute',
+    pointerEvents: 'none',
+    zIndex: 30,
+    background: 'rgba(10, 14, 23, 0.92)',
+    border: '1px solid #60efff',
+    borderRadius: '8px',
+    padding: '6px 10px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+    backdropFilter: 'blur(6px)'
+  },
+  tooltipBadge: {
+    background: '#60efff',
+    color: '#0a0e17',
+    fontSize: '0.75rem',
+    fontWeight: 'bold',
+    width: '18px',
+    height: '18px',
+    borderRadius: '50%',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    fontFamily: "'Outfit', sans-serif"
+  },
+  tooltipName: {
+    color: '#fff',
+    fontSize: '0.82rem',
+    fontWeight: 'bold',
+    whiteSpace: 'nowrap'
+  },
   sidebar: {
-    flex: '0.8',
+    flex: '0.9',
     borderLeft: '1px solid rgba(255, 255, 255, 0.08)',
     display: 'flex',
     flexDirection: 'column',
-    background: 'rgba(10, 14, 23, 0.3)'
+    background: 'rgba(10, 14, 23, 0.4)'
   },
   searchBox: {
-    padding: '16px',
+    padding: '12px 16px',
     position: 'relative',
     borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
   },
@@ -677,15 +1202,11 @@ const styles = {
     background: 'rgba(255, 255, 255, 0.05)',
     border: '1px solid rgba(255, 255, 255, 0.1)',
     borderRadius: '8px',
-    padding: '10px 12px',
+    padding: '9px 12px',
     color: '#fff',
-    fontSize: '0.88rem',
+    fontSize: '0.85rem',
     outline: 'none',
-    fontFamily: "'Inter', sans-serif",
-    transition: 'border-color 0.2s',
-    ':focus': {
-      borderColor: '#60efff'
-    }
+    fontFamily: "'Inter', sans-serif"
   },
   clearSearchBtn: {
     position: 'absolute',
@@ -698,6 +1219,22 @@ const styles = {
     fontSize: '18px',
     cursor: 'pointer'
   },
+  categoryChipsContainer: {
+    display: 'flex',
+    gap: '6px',
+    padding: '8px 16px',
+    overflowX: 'auto',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
+  },
+  categoryChip: {
+    border: 'none',
+    borderRadius: '12px',
+    padding: '4px 10px',
+    fontSize: '0.75rem',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    transition: 'background 0.2s, color 0.2s'
+  },
   tabContainer: {
     display: 'flex',
     borderBottom: '1px solid rgba(255, 255, 255, 0.05)'
@@ -707,12 +1244,11 @@ const styles = {
     background: 'none',
     border: 'none',
     color: 'rgba(255,255,255,0.5)',
-    padding: '12px',
-    fontSize: '0.88rem',
+    padding: '10px',
+    fontSize: '0.85rem',
     fontWeight: 'bold',
     cursor: 'pointer',
     borderBottom: '2px solid transparent',
-    transition: 'color 0.2s, border-color 0.2s',
     fontFamily: "'Inter', sans-serif"
   },
   activeTabBtn: {
@@ -720,8 +1256,8 @@ const styles = {
     background: 'none',
     border: 'none',
     color: '#60efff',
-    padding: '12px',
-    fontSize: '0.88rem',
+    padding: '10px',
+    fontSize: '0.85rem',
     fontWeight: 'bold',
     cursor: 'pointer',
     borderBottom: '2px solid #60efff',
@@ -741,21 +1277,22 @@ const styles = {
   },
   buildingDetailCard: {
     background: 'rgba(255,255,255,0.03)',
-    border: '1px solid rgba(255,255,255,0.06)',
-    borderRadius: '12px',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '14px',
     padding: '16px',
-    animation: 'slideIn 0.2s ease-out'
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px'
   },
   cardHeader: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-    marginBottom: '12px'
+    gap: '12px'
   },
   buildingBadge: {
     background: '#60efff',
     color: '#0a0e17',
-    fontSize: '0.85rem',
+    fontSize: '0.9rem',
     fontWeight: 'bold',
     padding: '4px 10px',
     borderRadius: '6px',
@@ -763,26 +1300,79 @@ const styles = {
   },
   buildingDetailName: {
     margin: 0,
-    fontSize: '1.1rem',
+    fontSize: '1.05rem',
     fontWeight: 'bold',
     color: '#fff',
     fontFamily: "'Outfit', sans-serif"
   },
+  categoryTag: {
+    display: 'inline-block',
+    fontSize: '0.65rem',
+    fontWeight: 'bold',
+    color: 'rgba(255,255,255,0.5)',
+    letterSpacing: '0.5px',
+    marginTop: '2px'
+  },
   cardDivider: {
     height: '1px',
-    background: 'rgba(255,255,255,0.08)',
-    marginBottom: '12px'
+    background: 'rgba(255,255,255,0.08)'
   },
   buildingDetailDesc: {
-    margin: '0 0 16px 0',
-    fontSize: '0.9rem',
+    margin: 0,
+    fontSize: '0.88rem',
     lineHeight: 1.6,
-    color: 'rgba(255, 255, 255, 0.75)'
+    color: 'rgba(255, 255, 255, 0.8)'
   },
   buildingCoordinates: {
     fontSize: '0.78rem',
     color: '#60efff',
-    opacity: 0.8
+    opacity: 0.85
+  },
+  cardActions: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    marginTop: '8px'
+  },
+  teleportBtn: {
+    background: 'linear-gradient(90deg, #0061ff, #60efff)',
+    color: '#000',
+    border: 'none',
+    borderRadius: '10px',
+    padding: '10px 14px',
+    fontSize: '0.88rem',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    fontFamily: "'Inter', sans-serif",
+    boxShadow: '0 4px 12px rgba(0, 97, 255, 0.3)'
+  },
+  secondaryActions: {
+    display: 'flex',
+    gap: '8px'
+  },
+  waypointBtn: {
+    flex: 1,
+    background: 'rgba(255, 255, 255, 0.06)',
+    border: '1px solid rgba(255, 255, 255, 0.12)',
+    color: '#fff',
+    borderRadius: '8px',
+    padding: '8px 10px',
+    fontSize: '0.78rem',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    fontFamily: "'Inter', sans-serif"
+  },
+  focusBtn: {
+    flex: 1,
+    background: 'rgba(255, 51, 102, 0.12)',
+    border: '1px solid rgba(255, 51, 102, 0.3)',
+    color: '#ff3366',
+    borderRadius: '8px',
+    padding: '8px 10px',
+    fontSize: '0.78rem',
+    fontWeight: 'bold',
+    cursor: 'pointer',
+    fontFamily: "'Inter', sans-serif"
   },
   emptyInspectState: {
     display: 'flex',
@@ -793,37 +1383,38 @@ const styles = {
     color: 'rgba(255,255,255,0.4)',
     textAlign: 'center',
     padding: '0 20px',
-    fontSize: '0.9rem',
-    lineHeight: 1.6
+    fontSize: '0.85rem',
+    lineHeight: 1.5
+  },
+  emptyInspectIcon: {
+    fontSize: '36px',
+    marginBottom: '8px'
   },
   startingLocationNotice: {
-    marginTop: '20px',
-    padding: '10px 14px',
+    marginTop: '12px',
+    padding: '8px 12px',
     background: 'rgba(96, 239, 255, 0.08)',
     border: '1px solid rgba(96, 239, 255, 0.2)',
     borderRadius: '8px',
     color: '#60efff',
-    fontSize: '0.8rem'
+    fontSize: '0.78rem'
   },
 
   // Directory Styles
   directoryList: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px'
+    gap: '6px'
   },
   directoryItem: {
     display: 'flex',
     alignItems: 'center',
-    gap: '12px',
-    padding: '10px 12px',
+    gap: '10px',
+    padding: '9px 12px',
     borderRadius: '8px',
     cursor: 'pointer',
     borderLeft: '3px solid transparent',
-    transition: 'background 0.2s, border-left-color 0.2s',
-    ':hover': {
-      background: 'rgba(255,255,255,0.06)'
-    }
+    transition: 'background 0.2s, border-left-color 0.2s'
   },
   directoryBadge: {
     minWidth: '22px',
@@ -841,9 +1432,23 @@ const styles = {
   directoryName: {
     color: '#fff',
     fontSize: '0.85rem',
+    fontWeight: '500',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
     textOverflow: 'ellipsis'
+  },
+  directorySubtext: {
+    color: 'rgba(255,255,255,0.4)',
+    fontSize: '0.7rem',
+    textTransform: 'uppercase'
+  },
+  nexusPill: {
+    background: 'linear-gradient(90deg, #ff3366, #ff6b00)',
+    color: '#fff',
+    fontSize: '0.65rem',
+    fontWeight: 'bold',
+    padding: '2px 6px',
+    borderRadius: '4px'
   },
   noResultsText: {
     textAlign: 'center',
@@ -856,12 +1461,11 @@ const styles = {
   legendOverlay: {
     position: 'fixed',
     inset: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    backgroundColor: 'rgba(0, 0, 0, 0.78)',
     display: 'flex',
     justifyContent: 'center',
     alignItems: 'center',
-    zIndex: 110,
-    animation: 'fadeIn 0.2s ease-out'
+    zIndex: 110
   },
   legendContent: {
     background: 'rgba(18, 23, 35, 0.98)',
@@ -870,8 +1474,8 @@ const styles = {
     boxShadow: '0 20px 48px rgba(0, 0, 0, 0.7)',
     width: '90vw',
     height: '80vh',
-    maxWidth: '550px',
-    maxHeight: '600px',
+    maxWidth: '650px',
+    maxHeight: '650px',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
@@ -913,10 +1517,7 @@ const styles = {
   legendRow: {
     borderBottom: '1px solid rgba(255,255,255,0.04)',
     cursor: 'pointer',
-    transition: 'background 0.2s',
-    ':hover': {
-      background: 'rgba(255,255,255,0.02)'
-    }
+    transition: 'background 0.2s'
   },
   thBadge: {
     padding: '10px 8px',
@@ -934,12 +1535,24 @@ const styles = {
     fontWeight: 'bold',
     borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
   },
+  thCategory: {
+    padding: '10px 8px',
+    fontSize: '0.78rem',
+    color: 'rgba(255,255,255,0.4)',
+    textTransform: 'uppercase',
+    fontWeight: 'bold',
+    borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+  },
   tdBadge: {
-    padding: '12px 8px',
+    padding: '10px 8px',
     verticalAlign: 'top'
   },
   tdName: {
-    padding: '12px 8px',
+    padding: '10px 8px',
+    verticalAlign: 'top'
+  },
+  tdCategory: {
+    padding: '10px 8px',
     verticalAlign: 'top'
   },
   tableBadge: {
@@ -966,20 +1579,24 @@ const styles = {
     color: 'rgba(255,255,255,0.5)',
     fontSize: '0.78rem',
     lineHeight: 1.4
+  },
+  tableCategoryPill: {
+    background: 'rgba(255,255,255,0.08)',
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: '0.68rem',
+    padding: '2px 8px',
+    borderRadius: '4px',
+    textTransform: 'uppercase'
   }
 };
 
-// CSS styles injection for smooth transitions and hover glow on hotspots
+// CSS styles injection for smooth transitions, hover effects, and keyframes
 if (typeof document !== 'undefined') {
   const styleTag = document.createElement('style');
   styleTag.innerHTML = `
     @keyframes fadeIn {
       from { opacity: 0; }
       to { opacity: 1; }
-    }
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
     }
     @keyframes bounce {
       0%, 100% { transform: translateY(0); }
@@ -989,10 +1606,14 @@ if (typeof document !== 'undefined') {
       0% { r: 8px; opacity: 0.8; }
       100% { r: 28px; opacity: 0; }
     }
+    .hud-minimap-btn:hover {
+      transform: scale(1.05);
+      border-color: #60efff !important;
+    }
     .map-building-hotspot:hover {
-      fill: rgba(96, 239, 255, 0.18) !important;
+      fill: rgba(96, 239, 255, 0.28) !important;
       stroke: #60efff !important;
-      stroke-width: 3px !important;
+      stroke-width: 2.5px !important;
     }
     .pulsing-ring {
       animation: pulse 1.6s cubic-bezier(0.24, 0, 0.38, 1) infinite;
@@ -1000,6 +1621,29 @@ if (typeof document !== 'undefined') {
     }
     .bouncing-pin {
       animation: bounce 1.2s ease-in-out infinite;
+    }
+    .zoom-btn:hover {
+      background: rgba(96, 239, 255, 0.25) !important;
+      border-color: #60efff !important;
+    }
+    .modal-action-btn:hover {
+      background: rgba(96, 239, 255, 0.25) !important;
+    }
+    .modal-close-btn:hover {
+      color: #fff !important;
+    }
+    .teleport-action-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(0, 97, 255, 0.5) !important;
+    }
+    .secondary-action-btn:hover {
+      background: rgba(255, 255, 255, 0.15) !important;
+    }
+    .directory-item-row:hover {
+      background: rgba(255, 255, 255, 0.08) !important;
+    }
+    .legend-table-row:hover {
+      background: rgba(255, 255, 255, 0.04) !important;
     }
   `;
   document.head.appendChild(styleTag);
