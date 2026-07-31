@@ -23,8 +23,8 @@ export const REGIONS = [
   { id: 'stp_20', x: 966, y: 38, w: 80, h: 133, solid: false },
 ];
 
-export const SPAWN_X = 550;
-export const SPAWN_Y = 750;
+export const SPAWN_X = 890;
+export const SPAWN_Y = 1850;
 
 export const NEXUS_DOOR_BOX = {
   x: 241,

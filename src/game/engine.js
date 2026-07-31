@@ -14,7 +14,7 @@ export class GameEngine {
       height: PLAYER_HEIGHT,
       color: '#ffeb3b',
       isMoving: false,
-      direction: 'down',
+      direction: 'up',
       animFrame: 0,
       animTimer: 0,
     };
