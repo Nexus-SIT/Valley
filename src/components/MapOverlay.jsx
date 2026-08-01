@@ -387,7 +387,7 @@ const MapOverlay = ({ gameState, onTeleport }) => {
                 {/* Map Content Box */}
                 <div style={styles.mapInner}>
                   <img
-                    src="/campus_map.png"
+                    src="/campus_map2.png"
                     alt="SIT Valachil Campus Map"
                     style={styles.mapImage}
                     draggable={false}

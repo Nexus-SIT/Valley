@@ -16,7 +16,7 @@ const MiniMap = ({ gameState, onClick }) => {
     >
       <div style={styles.mapContainer}>
         <img 
-          src="/campus_map.png" 
+          src="/campus_map2.png" 
           alt="Minimap Background" 
           style={styles.image} 
           draggable={false}
