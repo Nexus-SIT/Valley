@@ -1,37 +1,9 @@
 import React, { useState, useMemo } from 'react';
+import { MAP_WIDTH, MAP_HEIGHT } from '../game/mapData';
 
-const MAP_SIZE = 2000;
-
-// Coordinate calibration: maps character game coordinates (0-2000) to visual paths in campus_map.png
+// Map character game coordinates (0..MAP_WIDTH, 0..MAP_HEIGHT) directly
 const mapCoordinates = (x, y) => {
-  let rx = x;
-  let ry = y;
-
-  // X Coordinate Calibration
-  if (x <= 300) {
-    // Map left path: from game x=0..300 to image x=150..510
-    rx = 150 + (x / 300) * 360;
-  } else if (x > 300 && x <= 940) {
-    // Map middle path: from game x=300..940 to image x=510..1010
-    rx = 510 + ((x - 300) / 640) * 500;
-  } else {
-    // Map right path: from game x=940..2000 to image x=1010..1800
-    rx = 1010 + ((x - 940) / 1060) * 790;
-  }
-
-  // Y Coordinate Calibration
-  if (y <= 560) {
-    // Map top path: from game y=0..560 to image y=150..700
-    ry = 150 + (y / 560) * 550;
-  } else if (y > 560 && y <= 950) {
-    // Map middle path: from game y=560..950 to image y=700..1050
-    ry = 700 + ((y - 560) / 390) * 350;
-  } else {
-    // Map bottom path: from game y=950..2000 to image y=1050..1800
-    ry = 1050 + ((y - 950) / 1050) * 750;
-  }
-
-  return { x: Math.round(rx), y: Math.round(ry) };
+  return { x: Math.round(x), y: Math.round(y) };
 };
 
 // List of all 20 buildings with custom coordinates matching their locations in campus_map.png
@@ -76,8 +48,8 @@ const MapOverlay = ({ playerPos }) => {
     let vx = calibratedPos.x - size / 2;
     let vy = calibratedPos.y - size / 2;
     // Clamp to map boundaries
-    vx = Math.max(0, Math.min(vx, MAP_SIZE - size));
-    vy = Math.max(0, Math.min(vy, MAP_SIZE - size));
+    vx = Math.max(0, Math.min(vx, MAP_WIDTH - size));
+    vy = Math.max(0, Math.min(vy, MAP_HEIGHT - size));
     return `${vx} ${vy} ${size} ${size}`;
   }, [calibratedPos]);
 
@@ -169,7 +141,7 @@ const MapOverlay = ({ playerPos }) => {
     return (
       <>
         {/* 1. Base Image Map */}
-        <image href="/campus_map.png" x="0" y="0" width={MAP_SIZE} height={MAP_SIZE} />
+        <image href="/campus_map.png" x="0" y="0" width={MAP_WIDTH} height={MAP_HEIGHT} />
 
         {/* 2. Interactive Building Overlays */}
         {BUILDINGS.map(b => renderBuildingHotspot(b, isInteractive))}
@@ -208,8 +180,11 @@ const MapOverlay = ({ playerPos }) => {
           {renderSvgContent(false)}
         </svg>
         <div style={styles.miniMapOverlay}>
-          <span style={styles.miniMapLabel}>MAP</span>
-          <span style={styles.miniMapExpandHint}>CLICK</span>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={styles.miniMapLabel}>MAP</span>
+            <span style={styles.miniMapExpandHint}>CLICK</span>
+          </div>
+          <span style={styles.miniMapCoords}>📍 {playerPos.x}, {playerPos.y}</span>
         </div>
       </div>
 
@@ -222,7 +197,10 @@ const MapOverlay = ({ playerPos }) => {
             <div style={styles.modalHeader}>
               <div style={styles.modalTitleArea}>
                 <h2 style={styles.modalTitle}>Srinivas Institute of Technology</h2>
-                <p style={styles.modalSubtitle}>Valachil Campus Map & Directory</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px' }}>
+                  <p style={styles.modalSubtitle}>Valachil Campus Map & Directory</p>
+                  <span style={styles.modalCoordTag}>📍 Position: ({playerPos.x}, {playerPos.y}) • Tile: [{Math.floor(playerPos.x / 16)}, {Math.floor(playerPos.y / 16)}]</span>
+                </div>
               </div>
               <div style={styles.headerButtons}>
                 <button 
@@ -243,7 +221,7 @@ const MapOverlay = ({ playerPos }) => {
               {/* Map SVG (Left) */}
               <div style={styles.mapContainer}>
                 <svg 
-                  viewBox={`0 0 ${MAP_SIZE} ${MAP_SIZE}`}
+                  viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
                   style={styles.fullMapSvg}
                 >
                   {renderSvgContent(true)}
@@ -434,10 +412,30 @@ const styles = {
     color: '#60efff',
     fontSize: '8px',
     fontWeight: 'bold',
-    alignSelf: 'flex-end',
     textShadow: '0 1px 2px rgba(0,0,0,0.8)',
     fontFamily: "'Inter', sans-serif",
     letterSpacing: '0.5px'
+  },
+  miniMapCoords: {
+    color: '#60efff',
+    fontSize: '9px',
+    fontWeight: '700',
+    fontFamily: 'monospace',
+    textShadow: '0 1px 3px rgba(0,0,0,0.9)',
+    background: 'rgba(0, 0, 0, 0.6)',
+    padding: '2px 5px',
+    borderRadius: '4px',
+    alignSelf: 'flex-start'
+  },
+  modalCoordTag: {
+    color: '#60efff',
+    fontSize: '11px',
+    fontWeight: '600',
+    fontFamily: 'monospace',
+    background: 'rgba(96, 239, 255, 0.12)',
+    border: '1px solid rgba(96, 239, 255, 0.3)',
+    padding: '2px 8px',
+    borderRadius: '6px'
   },
 
   // Modal Styles

@@ -1,9 +1,81 @@
-import { REGIONS, MAP_WIDTH, MAP_HEIGHT, NEXUS_DOOR_BOX, SIGN_BOX } from './mapData';
+import { COLLISION_OBJECTS, MAP_WIDTH, MAP_HEIGHT, NEXUS_DOOR_BOX, SIGN_BOX } from './mapData';
 
-// Tiny player size to match map scale
-export const PLAYER_WIDTH = 16;
-export const PLAYER_HEIGHT = 24;
-export const PLAYER_SPEED = 2;
+// Tiny player size to match map scale (16x16 tile grid)
+export const PLAYER_WIDTH = 14;
+export const PLAYER_HEIGHT = 16;
+export const PLAYER_SPEED = 2.5;
+
+function pointInPolygon(px, py, vertices) {
+  let inside = false;
+  for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+    const xi = vertices[i].x, yi = vertices[i].y;
+    const xj = vertices[j].x, yj = vertices[j].y;
+    const intersect = ((yi > py) !== (yj > py)) &&
+        (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+function lineIntersects(p1x, p1y, p2x, p2y, p3x, p3y, p4x, p4y) {
+  function ccw(ax, ay, bx, by, cx, cy) {
+    return (cy - ay) * (bx - ax) > (by - ay) * (cx - ax);
+  }
+  return (ccw(p1x, p1y, p3x, p3y, p4x, p4y) !== ccw(p2x, p2y, p3x, p3y, p4x, p4y)) &&
+         (ccw(p1x, p1y, p2x, p2y, p3x, p3y) !== ccw(p1x, p1y, p2x, p2y, p4x, p4y));
+}
+
+function aabbPolygonOverlap(left, right, top, bottom, vertices) {
+  // 1. Polygon Bounding box quick check
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (let i = 0; i < vertices.length; i++) {
+    const v = vertices[i];
+    if (v.x < minX) minX = v.x;
+    if (v.x > maxX) maxX = v.x;
+    if (v.y < minY) minY = v.y;
+    if (v.y > maxY) maxY = v.y;
+  }
+  if (right < minX || left > maxX || bottom < minY || top > maxY) {
+    return false;
+  }
+
+  // 2. Check if any corner of player AABB is inside polygon
+  if (pointInPolygon(left, top, vertices) ||
+      pointInPolygon(right, top, vertices) ||
+      pointInPolygon(left, bottom, vertices) ||
+      pointInPolygon(right, bottom, vertices)) {
+    return true;
+  }
+
+  // 3. Check if any vertex of polygon is inside player AABB
+  for (let i = 0; i < vertices.length; i++) {
+    const v = vertices[i];
+    if (v.x >= left && v.x <= right && v.y >= top && v.y <= bottom) {
+      return true;
+    }
+  }
+
+  // 4. Check if any edge of player AABB intersects any edge of polygon
+  const boxEdges = [
+    [left, top, right, top],
+    [right, top, right, bottom],
+    [right, bottom, left, bottom],
+    [left, bottom, left, top]
+  ];
+
+  for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+    const v1 = vertices[i];
+    const v2 = vertices[j];
+    for (let k = 0; k < 4; k++) {
+      const e = boxEdges[k];
+      if (lineIntersects(e[0], e[1], e[2], e[3], v1.x, v1.y, v2.x, v2.y)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
 
 export class GameEngine {
   constructor(startX, startY, onInteract) {
@@ -12,9 +84,9 @@ export class GameEngine {
       y: startY,
       width: PLAYER_WIDTH,
       height: PLAYER_HEIGHT,
-      color: '#ffeb3b', // simple yellow player
+      color: '#ffeb3b',
       isMoving: false,
-      direction: 'down', // 'down', 'up', 'left', 'right'
+      direction: 'down',
       animFrame: 0,
       animTimer: 0,
     };
@@ -76,14 +148,14 @@ export class GameEngine {
 
       this.player.isMoving = true;
       this.player.animTimer++;
-      if (this.player.animTimer >= 8) { // 8 ticks per frame
+      if (this.player.animTimer >= 8) {
         this.player.animTimer = 0;
         this.player.animFrame = (this.player.animFrame + 1) % 4;
       }
     } else {
       this.player.isMoving = false;
       this.player.animTimer = 0;
-      this.player.animFrame = 0; // Reset to 'STAND' frame
+      this.player.animFrame = 0;
     }
   };
 
@@ -113,16 +185,20 @@ export class GameEngine {
       return true;
     }
 
-    // AABB Collision with solid regions
-    for (let region of REGIONS) {
-      if (region.solid) {
+    // Collisions with Tiled Object Layer shapes
+    for (let obj of COLLISION_OBJECTS) {
+      if (obj.type === 'polygon' && obj.vertices) {
+        if (aabbPolygonOverlap(left, right, top, bottom, obj.vertices)) {
+          return true;
+        }
+      } else if (obj.type === 'rect') {
         if (
-          right > region.x &&
-          left < region.x + region.w &&
-          bottom > region.y &&
-          top < region.y + region.h
+          right > obj.x &&
+          left < obj.x + obj.w &&
+          bottom > obj.y &&
+          top < obj.y + obj.h
         ) {
-          return true; // Collided
+          return true;
         }
       }
     }
@@ -137,11 +213,13 @@ export class GameEngine {
     const bottom = this.player.y + this.player.height;
 
     const isIntersecting = (b) => {
+      // Add slight interaction padding (e.g. 20px) around player
+      const pad = 20;
       return (
-        right > b.x &&
-        left < b.x + b.w &&
-        bottom > b.y &&
-        top < b.y + b.h
+        right + pad > b.x &&
+        left - pad < b.x + b.w &&
+        bottom + pad > b.y &&
+        top - pad < b.y + b.h
       );
     };
 

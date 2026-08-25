@@ -1,15 +1,34 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { GameEngine } from '../game/engine';
-import { REGIONS, MAP_WIDTH, MAP_HEIGHT, SPAWN_X, SPAWN_Y, NEXUS_DOOR_BOX, SIGN_BOX } from '../game/mapData';
+import {
+  MAP_WIDTH,
+  MAP_HEIGHT,
+  MAP_COLS,
+  MAP_ROWS,
+  TILE_WIDTH,
+  TILE_HEIGHT,
+  TILE_DATA,
+  TILESETS,
+  SPAWN_X,
+  SPAWN_Y,
+  NEXUS_DOOR_BOX,
+  SIGN_BOX
+} from '../game/mapData';
 import MapOverlay from './MapOverlay';
 
-const ZOOM = 4; // Zoom factor to make character visible
+const ZOOM = 2.8;
 
 const GameCanvas = ({ onInteract }) => {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
   const reqRef = useRef(null);
-  
+  const mapCanvasRef = useRef(null);
+  const ts1ImgRef = useRef(null);
+  const ts2ImgRef = useRef(null);
+  const tilesetsLoadedRef = useRef(false);
+  const [showGrid, setShowGrid] = useState(true);
+  const showGridRef = useRef(true);
+
   // Directions map to row indices 1, 2, 3, 4
   const playerImagesRef = useRef({
     down: [],
@@ -21,14 +40,84 @@ const GameCanvas = ({ onInteract }) => {
   const [playerPos, setPlayerPos] = useState({ x: SPAWN_X, y: SPAWN_Y });
 
   useEffect(() => {
+    showGridRef.current = showGrid;
+  }, [showGrid]);
+
+  useEffect(() => {
     const handleResize = () => setDimensions({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Pre-load tilesets and bake offscreen buffer canvas
   useEffect(() => {
-    // Initialize directional images
-    // Row 1: down, Row 2: up, Row 3: left, Row 4: right
+    let isCancelled = false;
+
+    const ts1Img = new Image();
+    const ts2Img = new Image();
+    ts1ImgRef.current = ts1Img;
+    ts2ImgRef.current = ts2Img;
+
+    let loadedCount = 0;
+    const checkAndBuild = () => {
+      loadedCount++;
+      if (loadedCount >= 2 && !isCancelled) {
+        tilesetsLoadedRef.current = true;
+        try {
+          const offscreen = document.createElement('canvas');
+          offscreen.width = MAP_WIDTH;
+          offscreen.height = MAP_HEIGHT;
+          const offCtx = offscreen.getContext('2d');
+          offCtx.imageSmoothingEnabled = false;
+
+          for (let row = 0; row < MAP_ROWS; row++) {
+            for (let col = 0; col < MAP_COLS; col++) {
+              const index = row * MAP_COLS + col;
+              const gid = TILE_DATA[index];
+              if (!gid || gid === 0) continue;
+
+              let img = ts1Img;
+              let localId = gid - 1;
+              let cols = TILESETS[0].columns;
+
+              if (gid >= TILESETS[1].firstgid) {
+                img = ts2Img;
+                localId = gid - TILESETS[1].firstgid;
+                cols = TILESETS[1].columns;
+              }
+
+              const sx = (localId % cols) * TILE_WIDTH;
+              const sy = Math.floor(localId / cols) * TILE_HEIGHT;
+              const dx = col * TILE_WIDTH;
+              const dy = row * TILE_HEIGHT;
+
+              offCtx.drawImage(img, sx, sy, TILE_WIDTH, TILE_HEIGHT, dx, dy, TILE_WIDTH, TILE_HEIGHT);
+            }
+          }
+
+          mapCanvasRef.current = offscreen;
+        } catch (err) {
+          console.error('Failed to bake map canvas:', err);
+        }
+      }
+    };
+
+    ts1Img.onload = checkAndBuild;
+    ts2Img.onload = checkAndBuild;
+
+    ts1Img.src = TILESETS[0].src;
+    ts2Img.src = TILESETS[1].src;
+
+    if (ts1Img.complete) checkAndBuild();
+    if (ts2Img.complete) checkAndBuild();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    // Initialize directional character images
     const dirMap = ['down', 'up', 'left', 'right'];
     
     dirMap.forEach((dir, rowIndex) => {
@@ -36,7 +125,6 @@ const GameCanvas = ({ onInteract }) => {
       for (let colIndex = 1; colIndex <= 4; colIndex++) {
         const img = new Image();
         img.src = `/characters/main/${rowIndex + 1}.${colIndex}.png`;
-        // Fallback to manish.png if the file doesn't exist yet so the game doesn't break
         img.onerror = () => {
           if (!img.fallbackAttempted) {
             img.fallbackAttempted = true;
@@ -49,12 +137,20 @@ const GameCanvas = ({ onInteract }) => {
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
 
     // Initialize engine
     engineRef.current = new GameEngine(SPAWN_X, SPAWN_Y, onInteract);
 
-    // Event listeners
-    window.addEventListener('keydown', engineRef.current.handleKeyDown);
+    // Key listeners
+    const onKeyDown = (e) => {
+      if (e.key === 'g' || e.key === 'G') {
+        setShowGrid(prev => !prev);
+      }
+      engineRef.current.handleKeyDown(e);
+    };
+
+    window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', engineRef.current.handleKeyUp);
 
     // Game loop
@@ -62,7 +158,6 @@ const GameCanvas = ({ onInteract }) => {
       engineRef.current.update();
       render(ctx, engineRef.current.player);
       
-      // Update coordinates in React state for the map overlay in real time
       setPlayerPos({
         x: Math.round(engineRef.current.player.x),
         y: Math.round(engineRef.current.player.y)
@@ -74,7 +169,7 @@ const GameCanvas = ({ onInteract }) => {
     reqRef.current = requestAnimationFrame(loop);
 
     return () => {
-      window.removeEventListener('keydown', engineRef.current.handleKeyDown);
+      window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', engineRef.current.handleKeyUp);
       cancelAnimationFrame(reqRef.current);
     };
@@ -84,95 +179,116 @@ const GameCanvas = ({ onInteract }) => {
     const VIEWPORT_W = window.innerWidth;
     const VIEWPORT_H = window.innerHeight;
 
-    // Calculate Camera Position (centered on player, accounting for zoom)
-    let camX = player.x + player.width / 2 - (VIEWPORT_W / ZOOM) / 2;
-    let camY = player.y + player.height / 2 - (VIEWPORT_H / ZOOM) / 2;
+    const viewW = VIEWPORT_W / ZOOM;
+    const viewH = VIEWPORT_H / ZOOM;
+
+    let camX = player.x + player.width / 2 - viewW / 2;
+    let camY = player.y + player.height / 2 - viewH / 2;
 
     // Clamp camera to map boundaries
-    camX = Math.max(0, Math.min(camX, MAP_WIDTH - (VIEWPORT_W / ZOOM)));
-    camY = Math.max(0, Math.min(camY, MAP_HEIGHT - (VIEWPORT_H / ZOOM)));
+    camX = Math.max(0, Math.min(camX, MAP_WIDTH - viewW));
+    camY = Math.max(0, Math.min(camY, MAP_HEIGHT - viewH));
 
-    // Clear and fill base (just in case)
-    ctx.fillStyle = '#000';
+    // Clear background
+    ctx.fillStyle = '#1a2e15';
     ctx.fillRect(0, 0, VIEWPORT_W, VIEWPORT_H);
 
     ctx.save();
-    // Apply zoom scaling and translate the context by the camera offset
     ctx.scale(ZOOM, ZOOM);
     ctx.translate(-camX, -camY);
 
-    // 1. Draw Regions
-    for (let region of REGIONS) {
-      // Basic culling: don't draw if outside viewport
-      if (
-        region.x + region.w < camX ||
-        region.x > camX + (VIEWPORT_W / ZOOM) ||
-        region.y + region.h < camY ||
-        region.y > camY + (VIEWPORT_H / ZOOM)
-      ) {
-        continue; // skip
-      }
+    // 1. Draw Map
+    if (mapCanvasRef.current) {
+      ctx.drawImage(mapCanvasRef.current, 0, 0);
+    } else {
+      // Direct viewport rendering fallback
+      const startCol = Math.max(0, Math.floor(camX / TILE_WIDTH));
+      const endCol = Math.min(MAP_COLS, Math.ceil((camX + viewW) / TILE_WIDTH) + 1);
+      const startRow = Math.max(0, Math.floor(camY / TILE_HEIGHT));
+      const endRow = Math.min(MAP_ROWS, Math.ceil((camY + viewH) / TILE_HEIGHT) + 1);
 
-      if (region.type === 'sign') {
-        // Draw sign post
-        ctx.fillStyle = '#5c4033'; // darker brown post
-        ctx.fillRect(region.x + region.w / 2 - 2, region.y + 10, 4, 10);
-        // Draw sign board
-        ctx.fillStyle = region.color;
-        ctx.fillRect(region.x, region.y, region.w, 15);
-        ctx.strokeStyle = '#3d2b1f';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(region.x, region.y, region.w, 15);
-        continue;
-      }
+      const ts1Img = ts1ImgRef.current;
+      const ts2Img = ts2ImgRef.current;
 
-      ctx.fillStyle = region.color;
-      ctx.fillRect(region.x, region.y, region.w, region.h);
+      for (let row = startRow; row < endRow; row++) {
+        for (let col = startCol; col < endCol; col++) {
+          const index = row * MAP_COLS + col;
+          const gid = TILE_DATA[index];
+          if (!gid || gid === 0) continue;
 
-      // Add a subtle border/texture for solid objects to make them pop
-      if (region.solid && region.type !== 'tree') {
-        ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(region.x, region.y, region.w, region.h);
-      }
+          let img = ts1Img;
+          let localId = gid - 1;
+          let cols = TILESETS[0].columns;
 
-      // Draw label for barrier
-      if (region.type === 'barrier' && region.label) {
-        ctx.fillStyle = '#ffcc00';
-        ctx.font = 'bold 18px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        // Draw the text multiple times across the barrier
-        for(let tx = region.x + 200; tx < region.x + region.w; tx += 400) {
-           ctx.fillText(region.label, tx, region.y + region.h / 2);
+          if (gid >= TILESETS[1].firstgid) {
+            img = ts2Img;
+            localId = gid - TILESETS[1].firstgid;
+            cols = TILESETS[1].columns;
+          }
+
+          if (img && img.complete && img.naturalWidth > 0) {
+            const sx = (localId % cols) * TILE_WIDTH;
+            const sy = Math.floor(localId / cols) * TILE_HEIGHT;
+            const dx = col * TILE_WIDTH;
+            const dy = row * TILE_HEIGHT;
+            ctx.drawImage(img, sx, sy, TILE_WIDTH, TILE_HEIGHT, dx, dy, TILE_WIDTH, TILE_HEIGHT);
+          }
         }
       }
     }
 
-    // Draw grid lines to emphasize scale
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-    ctx.lineWidth = 1;
-    for(let i=0; i<MAP_WIDTH; i+=100) {
-      ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, MAP_HEIGHT); ctx.stroke();
-    }
-    for(let i=0; i<MAP_HEIGHT; i+=100) {
-      ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(MAP_WIDTH, i); ctx.stroke();
+    // 2. Draw In-World Coordinate Grid & Labels (if enabled)
+    if (showGridRef.current) {
+      const step = 160; // 10 tiles (160 px) grid interval
+      const startGridX = Math.floor(camX / step) * step;
+      const endGridX = Math.min(MAP_WIDTH, Math.ceil((camX + viewW) / step) * step);
+      const startGridY = Math.floor(camY / step) * step;
+      const endGridY = Math.min(MAP_HEIGHT, Math.ceil((camY + viewH) / step) * step);
+
+      // Grid Lines
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.beginPath();
+      for (let gx = startGridX; gx <= endGridX; gx += step) {
+        ctx.moveTo(gx, startGridY);
+        ctx.lineTo(gx, endGridY);
+      }
+      for (let gy = startGridY; gy <= endGridY; gy += step) {
+        ctx.moveTo(startGridX, gy);
+        ctx.lineTo(endGridX, gy);
+      }
+      ctx.stroke();
+
+      // Coordinate Text Markers at Intersections
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.font = '700 8px monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      for (let gx = startGridX; gx <= endGridX; gx += step) {
+        for (let gy = startGridY; gy <= endGridY; gy += step) {
+          ctx.fillText(`${gx},${gy}`, gx + 3, gy + 3);
+        }
+      }
     }
 
-    // 2. Draw Interaction Boxes (visual aid)
-    ctx.fillStyle = 'rgba(0, 255, 255, 0.2)';
+    // 3. Draw Interaction Indicators
+    // Nexus Entrance
+    ctx.fillStyle = 'rgba(96, 239, 255, 0.25)';
     ctx.fillRect(NEXUS_DOOR_BOX.x, NEXUS_DOOR_BOX.y, NEXUS_DOOR_BOX.w, NEXUS_DOOR_BOX.h);
-    ctx.strokeStyle = '#0ff';
+    ctx.strokeStyle = '#60efff';
+    ctx.lineWidth = 1.5;
     ctx.strokeRect(NEXUS_DOOR_BOX.x, NEXUS_DOOR_BOX.y, NEXUS_DOOR_BOX.w, NEXUS_DOOR_BOX.h);
 
-    ctx.fillStyle = 'rgba(0, 255, 255, 0.2)';
+    // GitHub Sign
+    ctx.fillStyle = 'rgba(255, 204, 0, 0.25)';
     ctx.fillRect(SIGN_BOX.x, SIGN_BOX.y, SIGN_BOX.w, SIGN_BOX.h);
-    ctx.strokeStyle = '#0ff';
+    ctx.strokeStyle = '#ffcc00';
+    ctx.lineWidth = 1.5;
     ctx.strokeRect(SIGN_BOX.x, SIGN_BOX.y, SIGN_BOX.w, SIGN_BOX.h);
 
-    // 3. Draw Player
+    // 4. Draw Player
     const dirFrames = playerImagesRef.current[player.direction];
-    let currentImg = dirFrames && dirFrames.length > 0 ? dirFrames[0] : null; // Default to STAND frame
+    let currentImg = dirFrames && dirFrames.length > 0 ? dirFrames[0] : null;
     
     if (player.isMoving && dirFrames && dirFrames.length === 4) {
       currentImg = dirFrames[player.animFrame];
@@ -181,13 +297,9 @@ const GameCanvas = ({ onInteract }) => {
     if (currentImg && currentImg.complete && currentImg.naturalWidth > 0) {
       const natW = currentImg.naturalWidth;
       const natH = currentImg.naturalHeight;
-      
-      // Scale image to a reasonable size relative to the collision box
-      // Let's make it about 1.5x the height of the collision box
-      const drawH = player.height * 1.5; 
+      const drawH = player.height * 1.6; 
       const drawW = drawH * (natW / natH);
       
-      // Align bottom-center of the image with the bottom-center of the collision box.
       const drawX = player.x + (player.width - drawW) / 2;
       const drawY = player.y + (player.height - drawH);
 
@@ -195,22 +307,80 @@ const GameCanvas = ({ onInteract }) => {
     } else {
       ctx.fillStyle = player.color;
       ctx.fillRect(player.x, player.y, player.width, player.height);
-      // Draw tiny eyes to indicate facing/direction (static for now)
       ctx.fillStyle = '#000';
-      ctx.fillRect(player.x + 3, player.y + 4, 2, 2);
-      ctx.fillRect(player.x + 11, player.y + 4, 2, 2);
+      ctx.fillRect(player.x + 3, player.y + 3, 2, 2);
+      ctx.fillRect(player.x + 9, player.y + 3, 2, 2);
     }
 
-    ctx.restore(); // Restore context to screen coordinates
+    // Overhead Floating Coordinate Tag
+    const px = Math.round(player.x);
+    const py = Math.round(player.y);
+    const tagText = `${px}, ${py}`;
+    ctx.font = 'bold 8px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    const tagWidth = ctx.measureText(tagText).width + 8;
+    const tagH = 12;
+    const tagX = player.x + player.width / 2;
+    const tagY = player.y - 8;
 
-    // 4. Draw HUD / Overlay
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-    ctx.fillRect(10, 10, 300, 60);
-    ctx.fillStyle = '#fff';
-    ctx.font = '14px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(tagX - tagWidth / 2, tagY - tagH, tagWidth, tagH, 3);
+      ctx.fill();
+    } else {
+      ctx.fillRect(tagX - tagWidth / 2, tagY - tagH, tagWidth, tagH);
+    }
+    ctx.fillStyle = '#60efff';
+    ctx.fillText(tagText, tagX, tagY - 2);
+
+    ctx.restore();
+
+    // 5. Modern Glassmorphism Coordinate & Navigation HUD (Top-Left)
+    const hudW = 320;
+    const hudH = 92;
+    const hudX = 16;
+    const hudY = 16;
+
+    // HUD Background Card
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+    if (ctx.roundRect) {
+      ctx.beginPath();
+      ctx.roundRect(hudX, hudY, hudW, hudH, 10);
+      ctx.fill();
+    } else {
+      ctx.fillRect(hudX, hudY, hudW, hudH);
+    }
+    ctx.strokeStyle = 'rgba(96, 239, 255, 0.3)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // HUD Header / Coordinates row
     ctx.textAlign = 'left';
-    ctx.fillText('WASD/Arrows to move', 20, 30);
-    ctx.fillText('Find Nexus Building (Top) & Press SPACE', 20, 50);
+    ctx.textBaseline = 'top';
+
+    // Live World Coordinates Pill
+    ctx.fillStyle = '#60efff';
+    ctx.font = '700 13px "Courier New", monospace';
+    ctx.fillText(`📍 X: ${px.toString().padStart(4, ' ')}  Y: ${py.toString().padStart(4, ' ')}`, hudX + 14, hudY + 12);
+
+    // Tile Grid coordinates
+    const tileCol = Math.floor(player.x / TILE_WIDTH);
+    const tileRow = Math.floor(player.y / TILE_HEIGHT);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '600 11px monospace';
+    ctx.fillText(`🔲 Tile: [Col ${tileCol}, Row ${tileRow}]`, hudX + 14, hudY + 32);
+
+    // Map info & Grid Toggle
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '500 11px Inter, sans-serif';
+    ctx.fillText(`🗺️ Map: ${MAP_WIDTH}×${MAP_HEIGHT}px • [G] Grid: ${showGridRef.current ? 'ON' : 'OFF'}`, hudX + 14, hudY + 50);
+
+    // Controls prompt
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = '500 11px Inter, sans-serif';
+    ctx.fillText(`🎮 WASD / Arrows to move • SPACE/E to interact`, hudX + 14, hudY + 68);
   };
 
   return (
@@ -223,10 +393,10 @@ const GameCanvas = ({ onInteract }) => {
           display: 'block',
           width: '100%',
           height: '100%',
-          imageRendering: 'pixelated', // crisp look
+          imageRendering: 'pixelated',
         }}
       />
-      <MapOverlay playerPos={playerPos} />
+      <MapOverlay playerPos={playerPos} mapCanvas={mapCanvasRef.current} />
     </div>
   );
 };
