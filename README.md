@@ -36,3 +36,16 @@ Valley is a 2D web-based exploration game built with React, Vite, and HTML5 Canv
 
 - **WASD / Arrow Keys:** Move the character.
 - **E / Space:** Interact with objects (e.g., Nexus Door, Signs).
+
+## Contributing
+
+Valley is an open-source project created and maintained by club members and open-source contributors! We welcome bug reports, feature requests, and pull requests.
+
+Please read our [CONTRIBUTING.md](CONTRIBUTING.md) guide for details on our code of conduct, Contributor License Agreement, and contribution guidelines.
+
+Check out our awesome [CONTRIBUTORS.md](CONTRIBUTORS.md) list!
+
+## License
+
+This project is open source and available under the [MIT License](LICENSE).
+
