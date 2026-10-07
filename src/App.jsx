@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import GameCanvas from './components/GameCanvas';
+import PhaserGame from './game/phaser/PhaserGame';
 import NexusModal from './components/NexusModal';
 import SplashScreen from './components/SplashScreen';
 import GithubModal from './components/GithubModal';
@@ -55,7 +55,7 @@ function App() {
             </button>
           </div>
 
-          <GameCanvas onInteract={handleInteract} />
+          <PhaserGame onInteract={handleInteract} />
           {activeModal === 'nexus' && <NexusModal onClose={closeModal} />}
           {activeModal === 'github_sign' && <GithubModal onClose={closeModal} />}
         </div>
