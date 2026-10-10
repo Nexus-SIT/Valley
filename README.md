@@ -34,8 +34,11 @@ Valley is a 2D web-based exploration game built with React, Vite, and HTML5 Canv
 
 ## Controls
 
-- **WASD / Arrow Keys:** Move the character.
-- **E / Space:** Interact with objects (e.g., Nexus Door, Signs).
+- **On-Screen Virtual Joystick (Mobile / Mouse):** Touch and drag the circular joystick at the bottom-left to move smoothly in all directions.
+- **Weapon Attack (Mobile):** Tap the glowing fantasy sword button at the bottom-right.
+- **Keyboard Movement:** `WASD` / Arrow Keys.
+- **Keyboard Attack:** `Space` or `J`.
+- **Interact:** `E` / Space or tap the on-screen `TALK` button.
 
 ## Contributing
 

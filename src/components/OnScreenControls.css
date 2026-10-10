@@ -1,0 +1,452 @@
+/* ── Valley Virtual On-Screen Controls ─────────────────────────────── */
+
+.valley-touch-controls {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 80;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* ── 1. Circular Virtual Movement Controller (Bottom-Left) ───────── */
+
+.v-joystick-container {
+  position: absolute;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  left: calc(24px + env(safe-area-inset-left, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.v-joystick-base {
+  position: relative;
+  width: 154px;
+  height: 154px;
+  border-radius: 50%;
+  cursor: grab;
+  touch-action: none;
+
+  /* Layered dark blue metallic frame & semi-transparent backdrop */
+  background: radial-gradient(circle at 50% 50%, 
+    rgba(18, 38, 71, 0.72) 0%, 
+    rgba(10, 22, 44, 0.82) 65%, 
+    rgba(5, 12, 26, 0.92) 100%
+  );
+  border: 3px solid #1a3a60;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+
+  /* Subtle metallic highlight + soft cyan glow */
+  box-shadow: 
+    0 10px 28px rgba(0, 0, 0, 0.65),
+    0 0 0 2px rgba(56, 189, 248, 0.3),
+    0 0 20px rgba(6, 182, 212, 0.35),
+    inset 0 0 22px rgba(6, 182, 212, 0.28),
+    inset 0 2px 2px rgba(255, 255, 255, 0.15);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.v-joystick-base:active,
+.v-joystick-base.dragging {
+  cursor: grabbing;
+  border-color: #38bdf8;
+  box-shadow: 
+    0 10px 30px rgba(0, 0, 0, 0.75),
+    0 0 0 2px #38bdf8,
+    0 0 28px rgba(6, 182, 212, 0.6),
+    inset 0 0 26px rgba(6, 182, 212, 0.45);
+}
+
+/* Glowing cyan decorative track ring */
+.v-joystick-track {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  border-radius: 50%;
+  border: 1.5px dashed rgba(56, 189, 248, 0.45);
+  box-shadow: inset 0 0 12px rgba(6, 182, 212, 0.2);
+  pointer-events: none;
+}
+
+/* Directional Arrow Indicators (Up, Down, Left, Right) */
+.v-joystick-arrow {
+  position: absolute;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  color: rgba(56, 189, 248, 0.55);
+  text-shadow: 0 0 4px rgba(6, 182, 212, 0.5);
+  pointer-events: none;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+
+.v-arrow-up {
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.v-arrow-down {
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.v-arrow-left {
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.v-arrow-right {
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Active glowing arrow highlight when user points in that direction */
+.v-joystick-arrow.active {
+  color: #ffffff;
+  text-shadow: 
+    0 0 10px #00f5ff, 
+    0 0 20px #00f5ff,
+    0 0 30px #38bdf8;
+  filter: drop-shadow(0 0 4px #00f5ff);
+}
+
+.v-arrow-up.active {
+  transform: translateX(-50%) scale(1.35) translateY(-2px);
+}
+
+.v-arrow-down.active {
+  transform: translateX(-50%) scale(1.35) translateY(2px);
+}
+
+.v-arrow-left.active {
+  transform: translateY(-50%) scale(1.35) translateX(-2px);
+}
+
+.v-arrow-right.active {
+  transform: translateY(-50%) scale(1.35) translateX(2px);
+}
+
+/* Center Knob (Joystick Thumb) */
+.v-joystick-knob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 56px;
+  height: 56px;
+  margin-top: -28px;
+  margin-left: -28px;
+  border-radius: 50%;
+  pointer-events: none;
+
+  /* Layered dark blue metallic sphere with bright cyan accents */
+  background: radial-gradient(circle at 35% 35%, 
+    #2a558c 0%, 
+    #132c52 50%, 
+    #0a1830 100%
+  );
+  border: 2px solid #38bdf8;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.7),
+    0 0 16px rgba(56, 189, 248, 0.65),
+    inset 0 0 10px rgba(125, 211, 252, 0.5),
+    inset 0 2px 3px rgba(255, 255, 255, 0.6);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.08s ease-out;
+  will-change: transform;
+}
+
+.v-joystick-knob.dragging {
+  transition: none; /* Instant 60fps tracking during drag */
+  box-shadow: 
+    0 6px 16px rgba(0, 0, 0, 0.8),
+    0 0 22px #00f5ff,
+    inset 0 0 12px #38bdf8,
+    inset 0 2px 4px rgba(255, 255, 255, 0.8);
+}
+
+/* Center Rune / Gem Symbol inside Knob */
+.v-knob-gem {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #e0f2fe;
+  font-size: 13px;
+  text-shadow: 
+    0 0 8px #00f5ff, 
+    0 0 14px #38bdf8;
+  transform: rotate(45deg);
+  border: 1.5px solid #00f5ff;
+  background: rgba(6, 182, 212, 0.35);
+  box-shadow: 0 0 8px rgba(0, 245, 255, 0.7);
+}
+
+.v-joystick-label {
+  margin-top: 8px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: rgba(226, 232, 240, 0.7);
+  text-shadow: 1px 1px 0px #000, 0 0 6px rgba(56, 189, 248, 0.5);
+  pointer-events: none;
+}
+
+/* ── 2. Weapon & Action Buttons (Bottom-Right) ───────────────────── */
+
+.v-action-group {
+  position: absolute;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  right: calc(24px + env(safe-area-inset-right, 0px));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+/* Main Weapon / Attack Button */
+.v-attack-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.v-btn-attack {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  cursor: pointer;
+  touch-action: manipulation;
+  outline: none;
+  padding: 0;
+
+  /* Fantasy metallic frame with burnished bronze/gold rim and glowing cyan center */
+  background: radial-gradient(circle at 35% 35%, 
+    #1f3e69 0%, 
+    #0f2240 55%, 
+    #071120 100%
+  );
+  border: 3px solid #d97706;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.7),
+    0 0 0 2px rgba(245, 158, 11, 0.35),
+    0 0 20px rgba(217, 119, 6, 0.45),
+    inset 0 0 16px rgba(6, 182, 212, 0.4),
+    inset 0 2px 3px rgba(255, 255, 255, 0.25);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease, box-shadow 0.12s ease, filter 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.v-btn-attack:hover {
+  box-shadow: 
+    0 10px 28px rgba(0, 0, 0, 0.75),
+    0 0 0 2px #f59e0b,
+    0 0 28px rgba(245, 158, 11, 0.7),
+    inset 0 0 20px rgba(6, 182, 212, 0.6);
+}
+
+.v-btn-attack:active,
+.v-btn-attack.pressed {
+  transform: scale(0.92);
+  border-color: #fef08a;
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.8),
+    0 0 32px #00f5ff,
+    0 0 24px #f59e0b,
+    inset 0 0 24px rgba(245, 158, 11, 0.8);
+  filter: brightness(1.2);
+}
+
+.v-btn-attack.cooldown {
+  opacity: 0.75;
+  filter: grayscale(0.2);
+  cursor: not-allowed;
+}
+
+/* Pixel Sword Icon */
+.v-sword-icon {
+  width: 44px;
+  height: 44px;
+  display: block;
+  pointer-events: none;
+  filter: drop-shadow(0 0 6px rgba(0, 245, 255, 0.6));
+  transition: transform 0.15s ease;
+}
+
+.v-btn-attack:active .v-sword-icon,
+.v-btn-attack.pressed .v-sword-icon {
+  transform: rotate(-12deg) scale(1.1);
+  filter: drop-shadow(0 0 10px #00f5ff);
+}
+
+/* Button Labels */
+.v-attack-label {
+  margin-top: 8px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: #f1f5f9;
+  text-shadow: 1px 1px 0px #000, 0 0 8px rgba(245, 158, 11, 0.8);
+  pointer-events: none;
+}
+
+.v-key-hint {
+  margin-top: 4px;
+  font-family: 'Inter', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(148, 163, 184, 0.8);
+  text-shadow: 1px 1px 0px #000;
+  pointer-events: none;
+}
+
+/* Companion Interact Button (Mobile E/Interact Action) */
+.v-btn-interact {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  cursor: pointer;
+  touch-action: manipulation;
+  outline: none;
+  padding: 0;
+
+  background: radial-gradient(circle at 35% 35%, 
+    #1e3a5f 0%, 
+    #0f1f33 60%, 
+    #07101b 100%
+  );
+  border: 2px solid #38bdf8;
+  box-shadow: 
+    0 6px 18px rgba(0, 0, 0, 0.6),
+    0 0 14px rgba(56, 189, 248, 0.4),
+    inset 0 0 12px rgba(6, 182, 212, 0.35);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease, box-shadow 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.v-btn-interact:hover {
+  box-shadow: 
+    0 8px 20px rgba(0, 0, 0, 0.7),
+    0 0 20px rgba(56, 189, 248, 0.7);
+}
+
+.v-btn-interact:active,
+.v-btn-interact.pressed {
+  transform: scale(0.92);
+  border-color: #00f5ff;
+  box-shadow: 0 0 24px #00f5ff;
+}
+
+.v-interact-icon {
+  font-size: 16px;
+  line-height: 1;
+  filter: drop-shadow(0 0 4px #38bdf8);
+}
+
+.v-interact-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  margin-top: 3px;
+  color: #bae6fd;
+}
+
+/* ── 3. Responsive Adaptations ───────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .v-joystick-container {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    left: calc(16px + env(safe-area-inset-left, 0px));
+  }
+
+  .v-joystick-base {
+    width: 138px;
+    height: 138px;
+  }
+
+  .v-joystick-knob {
+    width: 50px;
+    height: 50px;
+    margin-top: -25px;
+    margin-left: -25px;
+  }
+
+  .v-action-group {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    right: calc(16px + env(safe-area-inset-right, 0px));
+    gap: 10px;
+  }
+
+  .v-btn-attack {
+    width: 68px;
+    height: 68px;
+  }
+
+  .v-sword-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .v-btn-interact {
+    width: 46px;
+    height: 46px;
+  }
+
+  .v-interact-icon {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .v-joystick-base {
+    width: 128px;
+    height: 128px;
+  }
+
+  .v-joystick-knob {
+    width: 46px;
+    height: 46px;
+    margin-top: -23px;
+    margin-left: -23px;
+  }
+
+  .v-btn-attack {
+    width: 64px;
+    height: 64px;
+  }
+
+  .v-sword-icon {
+    width: 34px;
+    height: 34px;
+  }
+
+  .v-key-hint {
+    display: none; /* Hide desktop keyboard hint on phone screens */
+  }
+}

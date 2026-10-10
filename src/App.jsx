@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import PhaserGame from './game/phaser/PhaserGame';
 import NexusModal from './components/NexusModal';
 import SplashScreen from './components/SplashScreen';
 import GithubModal from './components/GithubModal';
+import OnScreenControls from './components/OnScreenControls';
 import './App.css';
 
 function App() {
   const [activeModal, setActiveModal] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const controlsRef = useRef(null);
 
   const handleInteract = (type) => {
     if (!activeModal) {
@@ -18,6 +20,18 @@ function App() {
   const closeModal = () => {
     setActiveModal(null);
   };
+
+  const handleMove = useCallback((x, y) => {
+    controlsRef.current?.setAxis?.(x, y);
+  }, []);
+
+  const handleAttack = useCallback(() => {
+    controlsRef.current?.attack?.();
+  }, []);
+
+  const handleVirtualInteract = useCallback(() => {
+    controlsRef.current?.interact?.();
+  }, []);
 
   return (
     <div 
@@ -55,7 +69,15 @@ function App() {
             </button>
           </div>
 
-          <PhaserGame onInteract={handleInteract} />
+          <PhaserGame onInteract={handleInteract} controlsRef={controlsRef} />
+
+          {/* Mobile & Desktop On-Screen Controls */}
+          <OnScreenControls 
+            onMove={handleMove}
+            onAttack={handleAttack}
+            onInteract={handleVirtualInteract}
+          />
+
           {activeModal === 'nexus' && <NexusModal onClose={closeModal} />}
           {activeModal === 'github_sign' && <GithubModal onClose={closeModal} />}
         </div>

@@ -3,6 +3,7 @@ import spritesheetUrl from '../../../assets/tiled-map/spritesheet.png';
 import charWalkUrl   from '../../../assets/lpc_male_animations_2026-10-01T09-47-27/standard/walk.png';
 import charIdleUrl   from '../../../assets/lpc_male_animations_2026-10-01T09-47-27/standard/idle.png';
 import charRunUrl    from '../../../assets/lpc_male_animations_2026-10-01T09-47-27/standard/run.png';
+import charSlashUrl  from '../../../assets/lpc_male_animations_2026-10-01T09-47-27/standard/slash.png';
 
 /**
  * Renders first-trial-map.tmx with the real LPC character sprite.
@@ -18,6 +19,7 @@ import charRunUrl    from '../../../assets/lpc_male_animations_2026-10-01T09-47-
  *   Row 0 = UP  •  Row 1 = LEFT  •  Row 2 = DOWN  •  Row 3 = RIGHT
  *   Walk:  frames 0–8  (9 frames)
  *   Idle:  frames 0–1  (2 frames)
+ *   Slash: frames 0–5  (6 frames)
  */
 export default class IsoPrototypeScene extends Phaser.Scene {
   constructor() {
@@ -41,6 +43,7 @@ export default class IsoPrototypeScene extends Phaser.Scene {
     this.FRAME_H  = 64;  // LPC frame pixel height
     this.WALK_FRAMES = 9;
     this.IDLE_FRAMES = 2;
+    this.SLASH_FRAMES = 6;
 
     // Offscreen canvas for character frame extraction
     this._charCanvas = document.createElement('canvas');
@@ -64,6 +67,17 @@ export default class IsoPrototypeScene extends Phaser.Scene {
     this.animFrame  = 0;
     this.ANIM_SPEED = 8; // game ticks per frame advance
 
+    // Attack state
+    this.isAttacking = false;
+    this.attackFrame = 0;
+    this.attackTimer = 0;
+    this.ATTACK_ANIM_SPEED = 4;
+    this.lastAttackTime = 0;
+    this.attackCooldown = 350; // ms
+
+    // Virtual axis (from on-screen joystick)
+    this.virtualAxis = { x: 0, y: 0 };
+
     this.onInteract = null;
   }
 
@@ -73,6 +87,7 @@ export default class IsoPrototypeScene extends Phaser.Scene {
     this.load.image('char_walk',   charWalkUrl);
     this.load.image('char_idle',   charIdleUrl);
     this.load.image('char_run',    charRunUrl);
+    this.load.image('char_slash',  charSlashUrl);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -95,6 +110,21 @@ export default class IsoPrototypeScene extends Phaser.Scene {
     });
     this.cursors     = this.input.keyboard.createCursorKeys();
     this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
+
+    // Attack shortcuts on desktop
+    this.attackKeyJ     = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J);
+    this.attackKeySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+    // ── Event Bus for On-Screen / Mobile Controls ─────────────────
+    this.registry.events.on('set_virtual_axis', (axis) => {
+      if (axis) this.setVirtualAxis(axis.x, axis.y);
+    });
+    this.registry.events.on('trigger_virtual_attack', () => {
+      this.triggerAttack();
+    });
+    this.registry.events.on('trigger_virtual_interact', () => {
+      this.tryInteraction();
+    });
 
     // ── Camera ───────────────────────────────────────────────────
     this.cameras.main.startFollow(this.charSprite, true, 0.1, 0.1);
@@ -246,12 +276,28 @@ export default class IsoPrototypeScene extends Phaser.Scene {
    * shared _charCanvas, then refreshes the 'char_frame' texture.
    */
   drawCharFrame() {
-    const row       = this.DIR_ROW[this.direction] ?? 2;
-    const texKey    = this.isMoving ? 'char_walk' : 'char_idle';
-    const maxFrames = this.isMoving ? this.WALK_FRAMES : this.IDLE_FRAMES;
-    const frame     = this.animFrame % maxFrames;
+    const row = this.DIR_ROW[this.direction] ?? 2;
+    let texKey;
+    let maxFrames;
+    let frame;
 
-    const srcImg = this.textures.get(texKey).getSourceImage();
+    if (this.isAttacking) {
+      texKey = 'char_slash';
+      maxFrames = this.SLASH_FRAMES;
+      frame = Math.min(this.attackFrame, maxFrames - 1);
+    } else if (this.isMoving) {
+      texKey = 'char_walk';
+      maxFrames = this.WALK_FRAMES;
+      frame = this.animFrame % maxFrames;
+    } else {
+      texKey = 'char_idle';
+      maxFrames = this.IDLE_FRAMES;
+      frame = this.animFrame % maxFrames;
+    }
+
+    const tex = this.textures.get(texKey);
+    if (!tex) return;
+    const srcImg = tex.getSourceImage();
 
     const sx = frame * this.FRAME_W;
     const sy = row   * this.FRAME_H;
@@ -277,7 +323,7 @@ export default class IsoPrototypeScene extends Phaser.Scene {
       padding: { x: 10, y: 7 },
     }).setScrollFactor(0).setDepth(1000);
 
-    this.add.text(14, 52, 'WASD / Arrows  ·  E to interact', {
+    this.add.text(14, 50, 'WASD / Arrows · Space/J: Attack · E: Interact', {
       fontFamily: 'monospace',
       fontSize: '10px',
       color: '#94a3b8',
@@ -285,7 +331,7 @@ export default class IsoPrototypeScene extends Phaser.Scene {
       padding: { x: 8, y: 5 },
     }).setScrollFactor(0).setDepth(1000);
 
-    this.posText = this.add.text(14, 82, '', {
+    this.posText = this.add.text(14, 80, '', {
       fontFamily: 'monospace',
       fontSize: '9px',
       color: '#475569',
@@ -301,34 +347,50 @@ export default class IsoPrototypeScene extends Phaser.Scene {
   update() {
     let dx = 0, dy = 0;
 
+    // Physical keyboard input
     if (this.keys.left.isDown  || this.cursors.left.isDown)  dx -= 1;
     if (this.keys.right.isDown || this.cursors.right.isDown) dx += 1;
     if (this.keys.up.isDown    || this.cursors.up.isDown)    dy -= 1;
     if (this.keys.down.isDown  || this.cursors.down.isDown)  dy += 1;
 
+    // Virtual joystick input
+    if (this.virtualAxis) {
+      dx += this.virtualAxis.x;
+      dy += this.virtualAxis.y;
+    }
+
     if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
       this.tryInteraction();
     }
 
-    const moving = dx !== 0 || dy !== 0;
+    if (
+      Phaser.Input.Keyboard.JustDown(this.attackKeyJ) ||
+      Phaser.Input.Keyboard.JustDown(this.attackKeySpace)
+    ) {
+      this.triggerAttack();
+    }
+
+    const moving = Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05;
 
     // ── Direction ────────────────────────────────────────────────
-    // Vertical (W/S) takes priority over horizontal (A/D) for the sprite
-    // frame, so A+W shows the 'up' frame (same as W alone).
     if (moving) {
-      if      (dy < 0) this.direction = 'up';
-      else if (dy > 0) this.direction = 'down';
-      else if (dx < 0) this.direction = 'left';
-      else             this.direction = 'right';
+      if (Math.abs(dy) >= Math.abs(dx)) {
+        if      (dy < 0) this.direction = 'up';
+        else if (dy > 0) this.direction = 'down';
+      } else {
+        if      (dx < 0) this.direction = 'left';
+        else if (dx > 0) this.direction = 'right';
+      }
     }
 
     // ── Movement ─────────────────────────────────────────────────
     if (moving) {
-      const len    = Math.hypot(dx, dy) || 1;
+      const len = Math.hypot(dx, dy) || 1;
+      const speedScale = Math.min(1, Math.max(0.35, len));
       const newCol = Phaser.Math.Clamp(
-        this.playerCol + (dx / len) * this.speed, 0.5, this.mapCols - 1.5);
+        this.playerCol + (dx / len) * (this.speed * speedScale), 0.5, this.mapCols - 1.5);
       const newRow = Phaser.Math.Clamp(
-        this.playerRow + (dy / len) * this.speed, 0.5, this.mapRows - 1.5);
+        this.playerRow + (dy / len) * (this.speed * speedScale), 0.5, this.mapRows - 1.5);
 
       const tileGid = this.getTileAt(Math.floor(newCol), Math.floor(newRow));
       if (this.isWalkable(tileGid)) {
@@ -339,12 +401,25 @@ export default class IsoPrototypeScene extends Phaser.Scene {
 
     this.isMoving = moving;
 
-    // ── Animation timing ─────────────────────────────────────────
+    // ── Attack animation timing ──────────────────────────────────
+    if (this.isAttacking) {
+      this.attackTimer++;
+      if (this.attackTimer >= this.ATTACK_ANIM_SPEED) {
+        this.attackTimer = 0;
+        this.attackFrame++;
+        if (this.attackFrame >= this.SLASH_FRAMES) {
+          this.isAttacking = false;
+          this.attackFrame = 0;
+        }
+      }
+    }
+
+    // ── Walk / Idle animation timing ─────────────────────────────
     if (moving) {
       this.animTimer++;
       if (this.animTimer >= this.ANIM_SPEED) {
         this.animTimer = 0;
-        this.animFrame = (this.animFrame + 1) % (this.isMoving ? this.WALK_FRAMES : this.IDLE_FRAMES);
+        this.animFrame = (this.animFrame + 1) % this.WALK_FRAMES;
       }
     } else {
       this.animTimer = 0;
@@ -373,6 +448,110 @@ export default class IsoPrototypeScene extends Phaser.Scene {
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // Combat & Virtual Controller APIs
+  // ═══════════════════════════════════════════════════════════════
+
+  setVirtualAxis(x, y) {
+    this.virtualAxis = {
+      x: Phaser.Math.Clamp(Number(x) || 0, -1, 1),
+      y: Phaser.Math.Clamp(Number(y) || 0, -1, 1),
+    };
+  }
+
+  triggerAttack() {
+    const now = Date.now();
+    if (this.isAttacking || (now - this.lastAttackTime < this.attackCooldown)) {
+      return false;
+    }
+
+    this.lastAttackTime = now;
+    this.isAttacking = true;
+    this.attackFrame = 0;
+    this.attackTimer = 0;
+
+    this.drawCharFrame();
+    this.playSlashEffect();
+    return true;
+  }
+
+  playSlashEffect() {
+    const wp = this.toWorldPos(this.playerCol, this.playerRow);
+    const depth = 600 + this.playerCol + this.playerRow + 4;
+
+    let offsetX;
+    let offsetY;
+    let baseAngle;
+
+    switch (this.direction) {
+      case 'up':
+        offsetX = 0;
+        offsetY = -24;
+        baseAngle = -Math.PI / 2;
+        break;
+      case 'down':
+        offsetX = 0;
+        offsetY = 16;
+        baseAngle = Math.PI / 2;
+        break;
+      case 'left':
+        offsetX = -24;
+        offsetY = -6;
+        baseAngle = Math.PI;
+        break;
+      case 'right':
+      default:
+        offsetX = 24;
+        offsetY = -6;
+        baseAngle = 0;
+        break;
+    }
+
+    const slashOriginX = wp.x + offsetX;
+    const slashOriginY = wp.y + offsetY;
+
+    const gfx = this.add.graphics();
+    gfx.setDepth(depth);
+
+    const drawArc = (progress) => {
+      gfx.clear();
+      const radius = 18 + progress * 8;
+      const alpha = Math.max(0, 1 - progress);
+
+      // Outer cyan glow arc
+      gfx.lineStyle(4, 0x00f5ff, alpha * 0.85);
+      gfx.beginPath();
+      gfx.arc(slashOriginX, slashOriginY, radius, baseAngle - 0.75, baseAngle + 0.75, false);
+      gfx.strokePath();
+
+      // Inner sharp white arc
+      gfx.lineStyle(2, 0xffffff, alpha);
+      gfx.beginPath();
+      gfx.arc(slashOriginX, slashOriginY, radius, baseAngle - 0.5, baseAngle + 0.5, false);
+      gfx.strokePath();
+    };
+
+    drawArc(0);
+
+    let step = 0;
+    const timer = this.time.addEvent({
+      delay: 25,
+      repeat: 6,
+      callback: () => {
+        step++;
+        const progress = step / 6;
+        drawArc(progress);
+        if (step >= 6) {
+          gfx.destroy();
+          timer.destroy();
+        }
+      },
+    });
+
+    // Subtle punchy camera kick
+    this.cameras.main.shake(70, 0.0015);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // Helpers
   // ═══════════════════════════════════════════════════════════════
 
@@ -397,5 +576,8 @@ export default class IsoPrototypeScene extends Phaser.Scene {
 
   shutdown() {
     this.scale.off('resize', () => {}, this);
+    this.registry.events.off('set_virtual_axis');
+    this.registry.events.off('trigger_virtual_attack');
+    this.registry.events.off('trigger_virtual_interact');
   }
 }
