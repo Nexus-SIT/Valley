@@ -27,20 +27,91 @@
   box-sizing: border-box;
 }
 
-body {
+html, body {
   margin: 0;
   padding: 0;
-  min-height: 100vh;
-  min-width: 100vw;
+  width: 100%;
+  min-height: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
   background-color: var(--bg-canvas);
   color: var(--text-primary);
   font-family: 'Inter', sans-serif;
   overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
 }
 
 #root {
   width: 100%;
-  min-height: 100vh;
+  min-height: 100%;
+  min-height: 100dvh;
+}
+
+/* ── Valley Game Viewport Shell ─────────────────────────────────── */
+.valley-game-shell {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  overflow: hidden;
+  touch-action: none;
+  overscroll-behavior: none;
+  background-color: #0b1622;
+}
+
+.valley-phaser-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  touch-action: none;
+}
+
+.valley-phaser-container canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: none;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+.valley-exit-btn {
+  background-color: rgba(253, 251, 247, 0.92);
+  font-size: 0.8rem;
+  padding: 6px 14px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.valley-exit-btn:active {
+  transform: scale(0.95);
+  background-color: rgba(240, 235, 225, 0.95);
+}
+
+.exit-text-short {
+  display: none;
+}
+
+@media (max-width: 600px), (max-height: 500px) {
+  .valley-exit-btn {
+    font-size: 0.72rem;
+    padding: 5px 10px;
+  }
+  .exit-text-long {
+    display: none;
+  }
+  .exit-text-short {
+    display: inline;
+  }
 }
 
 /* Typography Utilities */

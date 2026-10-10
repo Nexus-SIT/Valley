@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 import IsoPrototypeScene from './scenes/IsoPrototypeScene';
+import { requestLandscapeOrientation } from '../../utils/orientationHelper';
 
 /**
  * React is responsible for the website shell.
@@ -57,18 +58,25 @@ export default function PhaserGame({ onInteract, controlsRef }) {
   useEffect(() => {
     if (!containerRef.current || gameRef.current) return undefined;
 
+    requestLandscapeOrientation();
+
+    const container = containerRef.current;
+    const initialWidth = container.clientWidth || window.innerWidth;
+    const initialHeight = container.clientHeight || window.innerHeight;
+
     const config = {
       type: Phaser.AUTO,
-      parent: containerRef.current,
-      width: window.innerWidth,
-      height: window.innerHeight,
-      backgroundColor: '#111827',
+      parent: container,
+      width: initialWidth,
+      height: initialHeight,
+      backgroundColor: '#0b1622',
       pixelArt: true,
       antialias: false,
       roundPixels: true,
       scale: {
         mode: Phaser.Scale.RESIZE,
-        autoCenter: Phaser.Scale.CENTER_BOTH,
+        width: initialWidth,
+        height: initialHeight,
       },
       scene: [IsoPrototypeScene],
       audio: {
@@ -77,9 +85,39 @@ export default function PhaserGame({ onInteract, controlsRef }) {
     };
 
     gameRef.current = new Phaser.Game(config);
+    window.__PHASER_GAME__ = gameRef.current;
     gameRef.current.registry.set('onInteract', (...args) => onInteractRef.current?.(...args));
 
+    // Handle container resizing (orientation change, dynamic browser toolbars)
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        if (width > 0 && height > 0 && gameRef.current?.scale) {
+          gameRef.current.scale.resize(Math.round(width), Math.round(height));
+        }
+      }
+    });
+
+    resizeObserver.observe(container);
+
+    const handleWindowResize = () => {
+      if (container && gameRef.current?.scale) {
+        const w = container.clientWidth || window.innerWidth;
+        const h = container.clientHeight || window.innerHeight;
+        if (w > 0 && h > 0) {
+          gameRef.current.scale.resize(Math.round(w), Math.round(h));
+        }
+      }
+    };
+
+    window.addEventListener('resize', handleWindowResize);
+    window.addEventListener('orientationchange', handleWindowResize);
+
     return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', handleWindowResize);
+      window.removeEventListener('orientationchange', handleWindowResize);
+      window.__PHASER_GAME__ = null;
       gameRef.current?.destroy(true);
       gameRef.current = null;
     };
@@ -88,12 +126,14 @@ export default function PhaserGame({ onInteract, controlsRef }) {
   return (
     <div
       ref={containerRef}
+      className="valley-phaser-container"
       style={{
         position: 'absolute',
         inset: 0,
         width: '100%',
         height: '100%',
         overflow: 'hidden',
+        touchAction: 'none',
       }}
     />
   );

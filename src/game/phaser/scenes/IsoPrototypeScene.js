@@ -165,9 +165,10 @@ export default class IsoPrototypeScene extends Phaser.Scene {
 
     // ── Camera ───────────────────────────────────────────────────
     this.cameras.main.startFollow(this.charSprite, true, 0.1, 0.1);
-    this.cameras.main.setZoom(2.0);
 
-    this.scale.on('resize', () => {}, this);
+    // Responsive scaling & mobile portrait framing
+    this.scale.on('resize', this.handleResize, this);
+    this.handleResize(this.scale.gameSize);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -651,7 +652,7 @@ export default class IsoPrototypeScene extends Phaser.Scene {
   // ═══════════════════════════════════════════════════════════════
 
   createHud() {
-    this.add.text(14, 14, '🗺  Valley — Isometric Campus Map', {
+    this.hudTitle = this.add.text(14, 14, '🗺  Valley — Isometric Campus Map', {
       fontFamily: 'monospace',
       fontSize: '13px',
       color: '#7dd3fc',
@@ -659,7 +660,7 @@ export default class IsoPrototypeScene extends Phaser.Scene {
       padding: { x: 10, y: 7 },
     }).setScrollFactor(0).setDepth(1000);
 
-    this.add.text(14, 52, '🖱️ Click anywhere to move (A*) · WASD / Arrows · Space/J: Attack · E: Interact', {
+    this.hudSubtitle = this.add.text(14, 52, '🖱️ Click anywhere to move (A*) · WASD / Arrows · Space/J: Attack · E: Interact', {
       fontFamily: 'monospace',
       fontSize: '10px',
       color: '#94a3b8',
@@ -674,6 +675,95 @@ export default class IsoPrototypeScene extends Phaser.Scene {
       backgroundColor: '#0f172a99',
       padding: { x: 6, y: 4 },
     }).setScrollFactor(0).setDepth(1000);
+  }
+
+  handleResize(gameSize) {
+    if (!gameSize || !this.cameras?.main) return;
+    const width = gameSize.width;
+    const height = gameSize.height;
+
+    this.updateCameraForViewport(width, height);
+    this.updateHudLayout(width, height);
+  }
+
+  updateCameraForViewport(width, height) {
+    const isPortrait = height > width;
+
+    let targetZoom = 2.0;
+    if (isPortrait) {
+      // Dynamic zoom for portrait mobile screens
+      targetZoom = Math.min(1.7, Math.max(1.3, width / 260));
+    } else if (height <= 480) {
+      // Mobile Landscape (height: 320px - 480px, width: 640px - 932px)
+      // Calibrated so pixel art is crisp and terrain is widely visible
+      targetZoom = Math.min(1.85, Math.max(1.4, height / 230));
+    } else if (width < 960) {
+      targetZoom = Math.min(2.0, Math.max(1.5, width / 520));
+    } else {
+      targetZoom = 2.0;
+    }
+
+    this.cameras.main.setZoom(targetZoom);
+  }
+
+  updateHudLayout(width, height) {
+    if (!this.hudTitle || !this.hudSubtitle || !this.posText) return;
+
+    const isPortrait = height > width;
+    const isMobileLandscape = height <= 500 && width > height;
+
+    if (isPortrait) {
+      this.hudTitle
+        .setPosition(10, 10)
+        .setFontSize('11px')
+        .setText('🗺 Valley RPG')
+        .setPadding(8, 5);
+
+      this.hudSubtitle
+        .setPosition(10, 38)
+        .setFontSize('8px')
+        .setText('Tap map · Joystick & buttons')
+        .setPadding(6, 4);
+
+      this.posText
+        .setPosition(10, 62)
+        .setFontSize('8px')
+        .setPadding(5, 3);
+    } else if (isMobileLandscape) {
+      this.hudTitle
+        .setPosition(10, 8)
+        .setFontSize('10px')
+        .setText('🗺 Valley RPG')
+        .setPadding(6, 4);
+
+      this.hudSubtitle
+        .setPosition(10, 30)
+        .setFontSize('7.5px')
+        .setText('Tap map · Joystick to move · Sword to attack')
+        .setPadding(5, 3);
+
+      this.posText
+        .setPosition(10, 50)
+        .setFontSize('7.5px')
+        .setPadding(4, 2);
+    } else {
+      this.hudTitle
+        .setPosition(14, 14)
+        .setFontSize('13px')
+        .setText('🗺  Valley — Isometric Campus Map')
+        .setPadding(10, 7);
+
+      this.hudSubtitle
+        .setPosition(14, 52)
+        .setFontSize('10px')
+        .setText('🖱️ Click anywhere to move (A*) · WASD / Arrows · Space/J: Attack · E: Interact')
+        .setPadding(8, 5);
+
+      this.posText
+        .setPosition(14, 80)
+        .setFontSize('9px')
+        .setPadding(6, 4);
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -993,7 +1083,7 @@ export default class IsoPrototypeScene extends Phaser.Scene {
   }
 
   shutdown() {
-    this.scale.off('resize', () => {}, this);
+    this.scale.off('resize', this.handleResize, this);
     this.registry.events.off('set_virtual_axis');
     this.registry.events.off('trigger_virtual_attack');
     this.registry.events.off('trigger_virtual_interact');

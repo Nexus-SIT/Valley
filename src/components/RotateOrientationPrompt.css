@@ -1,0 +1,179 @@
+/* ── Rotate Orientation Prompt Modal Overlay ────────────────────────── */
+
+.valley-rotate-overlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  z-index: 9999;
+  background: radial-gradient(circle at 50% 40%, rgba(15, 23, 42, 0.96) 0%, rgba(5, 10, 20, 0.99) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  box-sizing: border-box;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  animation: fadeInRotatePrompt 0.25s ease-out;
+}
+
+@keyframes fadeInRotatePrompt {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.valley-rotate-card {
+  width: 100%;
+  max-width: 380px;
+  background: #101c2c;
+  border: 2px solid #38bdf8;
+  border-radius: 12px;
+  padding: 28px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  box-shadow: 
+    0 16px 40px rgba(0, 0, 0, 0.8),
+    0 0 0 1px rgba(56, 189, 248, 0.4),
+    0 0 30px rgba(56, 189, 248, 0.25);
+}
+
+/* ── Rotating Phone Animation ───────────────────────────────────── */
+.valley-phone-animation-box {
+  position: relative;
+  width: 110px;
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.valley-phone-icon-wrapper {
+  animation: rotatePhone 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  transform-origin: center center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@keyframes rotatePhone {
+  0%, 15% {
+    transform: rotate(0deg);
+  }
+  45%, 70% {
+    transform: rotate(-90deg);
+  }
+  85%, 100% {
+    transform: rotate(0deg);
+  }
+}
+
+.valley-rotate-arrows-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  animation: pulseGlow 2.6s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.45;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.03);
+  }
+}
+
+/* ── Text Styling ───────────────────────────────────────────────── */
+.valley-rotate-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #38bdf8;
+  text-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+  margin: 0 0 12px;
+  letter-spacing: 0.5px;
+}
+
+.valley-rotate-subtitle {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #cbd5e1;
+  margin: 0 0 8px;
+}
+
+.valley-rotate-hint {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #94a3b8;
+  margin: 0 0 20px;
+}
+
+/* ── Button Group ───────────────────────────────────────────────── */
+.valley-rotate-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.valley-rotate-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  border: 1px solid #38bdf8;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(2, 132, 199, 0.45);
+  transition: transform 0.12s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.valley-rotate-action-btn:active {
+  transform: scale(0.97);
+  background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+}
+
+.valley-rotate-exit-btn {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.7);
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.valley-rotate-exit-btn:active {
+  background: rgba(30, 41, 59, 0.9);
+  color: #f1f5f9;
+}

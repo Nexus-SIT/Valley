@@ -87,6 +87,7 @@ export default function OnScreenControls({ onMove, onAttack, onInteract }) {
 
   const handlePointerDown = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     const base = baseRef.current;
     if (!base) return;
 
@@ -104,12 +105,14 @@ export default function OnScreenControls({ onMove, onAttack, onInteract }) {
   const handlePointerMove = (e) => {
     if (activePointerIdRef.current !== e.pointerId) return;
     e.preventDefault();
+    e.stopPropagation();
     updateJoystick(e.clientX, e.clientY);
   };
 
   const handlePointerUp = (e) => {
     if (activePointerIdRef.current !== e.pointerId) return;
     e.preventDefault();
+    e.stopPropagation();
     try {
       baseRef.current?.releasePointerCapture(e.pointerId);
     } catch (err) {
