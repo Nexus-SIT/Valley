@@ -3,10 +3,24 @@ import spritesheetUrl from '../../../assets/tiled-map/spritesheet.png';
 import charWalkUrl   from '../../../assets/lpc_male_animations_2026-10-01T09-47-27/standard/walk.png';
 import charIdleUrl   from '../../../assets/lpc_male_animations_2026-10-01T09-47-27/standard/idle.png';
 import charRunUrl    from '../../../assets/lpc_male_animations_2026-10-01T09-47-27/standard/run.png';
+import charSlashUrl  from '../../../assets/lpc_male_animations_2026-10-01T09-47-27/standard/slash.png';
 import IsoPathfinder from '../pathfinding/IsoPathfinder';
 
 /**
  * Valley Isometric Campus Scene
+ *
+ * ── Map ───────────────────────────────────────────────────────────
+ *   orientation = isometric  •  tilewidth=32  tileheight=16
+ *   30 × 30 tiles  •  tileset: spritesheet.png (32×32, 11 cols)
+ *   Tileset 1: firstgid=1   (GIDs  1–121)
+ *   Tileset 2: firstgid=122 (GIDs 122–242)  ← same image, offset
+ *
+ * ── Character & Movement ──────────────────────────────────────────
+ *   LPC standard layout: 64×64 px / frame  •  13 cols × 4 rows
+ *   Row 0 = UP  •  Row 1 = LEFT  •  Row 2 = DOWN  •  Row 3 = RIGHT
+ *   Walk:  frames 0–8  (9 frames)
+ *   Idle:  frames 0–1  (2 frames)
+ *   Slash: frames 0–5  (6 frames)
  *
  * Movement:
  * - 8-directional A* Click-to-Move with diagonal cost √2
@@ -14,9 +28,9 @@ import IsoPathfinder from '../pathfinding/IsoPathfinder';
  * - Continuous smooth character movement with acceleration & deceleration
  * - Visual click destination marker & real-time path trail
  * - Real-time hover cursor tile highlighting (walkable vs blocked)
- * - Direction-aware LPC sprite animations (walk / idle)
+ * - Direction-aware LPC sprite animations (walk / idle / attack)
  * - Dynamic isometric depth sorting
- * - Optional manual WASD / Arrow key override
+ * - Optional manual WASD / Arrow key override & mobile virtual joystick
  */
 export default class IsoPrototypeScene extends Phaser.Scene {
   constructor() {
@@ -40,6 +54,7 @@ export default class IsoPrototypeScene extends Phaser.Scene {
     this.FRAME_H  = 64;  // LPC frame pixel height
     this.WALK_FRAMES = 9;
     this.IDLE_FRAMES = 2;
+    this.SLASH_FRAMES = 6;
 
     // Offscreen canvas for character frame extraction
     this._charCanvas = document.createElement('canvas');
@@ -82,6 +97,17 @@ export default class IsoPrototypeScene extends Phaser.Scene {
     this.animFrame  = 0;
     this.ANIM_SPEED = 7; // ticks per frame advance
 
+    // Attack state
+    this.isAttacking = false;
+    this.attackFrame = 0;
+    this.attackTimer = 0;
+    this.ATTACK_ANIM_SPEED = 4;
+    this.lastAttackTime = 0;
+    this.attackCooldown = 350; // ms
+
+    // Virtual axis (from on-screen joystick)
+    this.virtualAxis = { x: 0, y: 0 };
+
     this.onInteract = null;
   }
 
@@ -91,6 +117,7 @@ export default class IsoPrototypeScene extends Phaser.Scene {
     this.load.image('char_walk',   charWalkUrl);
     this.load.image('char_idle',   charIdleUrl);
     this.load.image('char_run',    charRunUrl);
+    this.load.image('char_slash',  charSlashUrl);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -118,14 +145,30 @@ export default class IsoPrototypeScene extends Phaser.Scene {
     this.cursors     = this.input.keyboard.createCursorKeys();
     this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
 
+    // Attack shortcuts on desktop
+    this.attackKeyJ     = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.J);
+    this.attackKeySpace = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+    // ── Event Bus for On-Screen / Mobile Controls ─────────────────
+    this.registry.events.on('set_virtual_axis', (axis) => {
+      if (axis) this.setVirtualAxis(axis.x, axis.y);
+    });
+    this.registry.events.on('trigger_virtual_attack', () => {
+      this.triggerAttack();
+    });
+    this.registry.events.on('trigger_virtual_interact', () => {
+      this.tryInteraction();
+    });
+
     // ── Input: Mouse Click-to-Move ───────────────────────────────
     this.input.on('pointerdown', this.handlePointerDown, this);
 
     // ── Camera ───────────────────────────────────────────────────
     this.cameras.main.startFollow(this.charSprite, true, 0.1, 0.1);
-    this.cameras.main.setZoom(2.0);
 
-    this.scale.on('resize', () => {}, this);
+    // Responsive scaling & mobile portrait framing
+    this.scale.on('resize', this.handleResize, this);
+    this.handleResize(this.scale.gameSize);
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -317,12 +360,28 @@ export default class IsoPrototypeScene extends Phaser.Scene {
   }
 
   drawCharFrame() {
-    const row       = this.DIR_ROW[this.direction] ?? 2;
-    const texKey    = this.isMoving ? 'char_walk' : 'char_idle';
-    const maxFrames = this.isMoving ? this.WALK_FRAMES : this.IDLE_FRAMES;
-    const frame     = this.animFrame % maxFrames;
+    const row = this.DIR_ROW[this.direction] ?? 2;
+    let texKey;
+    let maxFrames;
+    let frame;
 
-    const srcImg = this.textures.get(texKey).getSourceImage();
+    if (this.isAttacking) {
+      texKey = 'char_slash';
+      maxFrames = this.SLASH_FRAMES;
+      frame = Math.min(this.attackFrame, maxFrames - 1);
+    } else if (this.isMoving) {
+      texKey = 'char_walk';
+      maxFrames = this.WALK_FRAMES;
+      frame = this.animFrame % maxFrames;
+    } else {
+      texKey = 'char_idle';
+      maxFrames = this.IDLE_FRAMES;
+      frame = this.animFrame % maxFrames;
+    }
+
+    const tex = this.textures.get(texKey);
+    if (!tex) return;
+    const srcImg = tex.getSourceImage();
 
     const sx = frame * this.FRAME_W;
     const sy = row   * this.FRAME_H;
@@ -593,7 +652,7 @@ export default class IsoPrototypeScene extends Phaser.Scene {
   // ═══════════════════════════════════════════════════════════════
 
   createHud() {
-    this.add.text(14, 14, '🗺  Valley — Isometric Campus Map', {
+    this.hudTitle = this.add.text(14, 14, '🗺  Valley — Isometric Campus Map', {
       fontFamily: 'monospace',
       fontSize: '13px',
       color: '#7dd3fc',
@@ -601,7 +660,7 @@ export default class IsoPrototypeScene extends Phaser.Scene {
       padding: { x: 10, y: 7 },
     }).setScrollFactor(0).setDepth(1000);
 
-    this.add.text(14, 52, '🖱️ Click anywhere to move (A*) · WASD / Arrows · E interact', {
+    this.hudSubtitle = this.add.text(14, 52, '🖱️ Click anywhere to move (A*) · WASD / Arrows · Space/J: Attack · E: Interact', {
       fontFamily: 'monospace',
       fontSize: '10px',
       color: '#94a3b8',
@@ -609,7 +668,7 @@ export default class IsoPrototypeScene extends Phaser.Scene {
       padding: { x: 8, y: 5 },
     }).setScrollFactor(0).setDepth(1000);
 
-    this.posText = this.add.text(14, 82, '', {
+    this.posText = this.add.text(14, 80, '', {
       fontFamily: 'monospace',
       fontSize: '9px',
       color: '#38bdf8',
@@ -618,23 +677,127 @@ export default class IsoPrototypeScene extends Phaser.Scene {
     }).setScrollFactor(0).setDepth(1000);
   }
 
+  handleResize(gameSize) {
+    if (!gameSize || !this.cameras?.main) return;
+    const width = gameSize.width;
+    const height = gameSize.height;
+
+    this.updateCameraForViewport(width, height);
+    this.updateHudLayout(width, height);
+  }
+
+  updateCameraForViewport(width, height) {
+    const isPortrait = height > width;
+
+    let targetZoom = 2.0;
+    if (isPortrait) {
+      // Dynamic zoom for portrait mobile screens
+      targetZoom = Math.min(1.7, Math.max(1.3, width / 260));
+    } else if (height <= 480) {
+      // Mobile Landscape (height: 320px - 480px, width: 640px - 932px)
+      // Calibrated so pixel art is crisp and terrain is widely visible
+      targetZoom = Math.min(1.85, Math.max(1.4, height / 230));
+    } else if (width < 960) {
+      targetZoom = Math.min(2.0, Math.max(1.5, width / 520));
+    } else {
+      targetZoom = 2.0;
+    }
+
+    this.cameras.main.setZoom(targetZoom);
+  }
+
+  updateHudLayout(width, height) {
+    if (!this.hudTitle || !this.hudSubtitle || !this.posText) return;
+
+    const isPortrait = height > width;
+    const isMobileLandscape = height <= 500 && width > height;
+
+    if (isPortrait) {
+      this.hudTitle
+        .setPosition(10, 10)
+        .setFontSize('11px')
+        .setText('🗺 Valley RPG')
+        .setPadding(8, 5);
+
+      this.hudSubtitle
+        .setPosition(10, 38)
+        .setFontSize('8px')
+        .setText('Tap map · Joystick & buttons')
+        .setPadding(6, 4);
+
+      this.posText
+        .setPosition(10, 62)
+        .setFontSize('8px')
+        .setPadding(5, 3);
+    } else if (isMobileLandscape) {
+      this.hudTitle
+        .setPosition(10, 8)
+        .setFontSize('10px')
+        .setText('🗺 Valley RPG')
+        .setPadding(6, 4);
+
+      this.hudSubtitle
+        .setPosition(10, 30)
+        .setFontSize('7.5px')
+        .setText('Tap map · Joystick to move · Sword to attack')
+        .setPadding(5, 3);
+
+      this.posText
+        .setPosition(10, 50)
+        .setFontSize('7.5px')
+        .setPadding(4, 2);
+    } else {
+      this.hudTitle
+        .setPosition(14, 14)
+        .setFontSize('13px')
+        .setText('🗺  Valley — Isometric Campus Map')
+        .setPadding(10, 7);
+
+      this.hudSubtitle
+        .setPosition(14, 52)
+        .setFontSize('10px')
+        .setText('🖱️ Click anywhere to move (A*) · WASD / Arrows · Space/J: Attack · E: Interact')
+        .setPadding(8, 5);
+
+      this.posText
+        .setPosition(14, 80)
+        .setFontSize('9px')
+        .setPadding(6, 4);
+    }
+  }
+
   // ═══════════════════════════════════════════════════════════════
   // Update Loop
   // ═══════════════════════════════════════════════════════════════
 
   update() {
-    // ── 1. Manual Keyboard Override (WASD / Arrows) ──────────────
-    let kx = 0, ky = 0;
-    if (this.keys.left.isDown  || this.cursors.left.isDown)  kx -= 1;
-    if (this.keys.right.isDown || this.cursors.right.isDown) kx += 1;
-    if (this.keys.up.isDown    || this.cursors.up.isDown)    ky -= 1;
-    if (this.keys.down.isDown  || this.cursors.down.isDown)  ky += 1;
+    // ── 1. Manual Input Override (WASD / Arrows / Virtual Joystick) ──────────────
+    let dx = 0, dy = 0;
+
+    // Physical keyboard input
+    if (this.keys.left.isDown  || this.cursors.left.isDown)  dx -= 1;
+    if (this.keys.right.isDown || this.cursors.right.isDown) dx += 1;
+    if (this.keys.up.isDown    || this.cursors.up.isDown)    dy -= 1;
+    if (this.keys.down.isDown  || this.cursors.down.isDown)  dy += 1;
+
+    // Virtual joystick input
+    if (this.virtualAxis) {
+      dx += this.virtualAxis.x;
+      dy += this.virtualAxis.y;
+    }
 
     if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
       this.tryInteraction();
     }
 
-    const manualMoving = kx !== 0 || ky !== 0;
+    if (
+      Phaser.Input.Keyboard.JustDown(this.attackKeyJ) ||
+      Phaser.Input.Keyboard.JustDown(this.attackKeySpace)
+    ) {
+      this.triggerAttack();
+    }
+
+    const manualMoving = Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05;
 
     if (manualMoving) {
       // Manual input cancels any active click-to-move path
@@ -642,16 +805,20 @@ export default class IsoPrototypeScene extends Phaser.Scene {
         this.clearPath(false);
       }
 
-      if      (ky < 0) this.direction = 'up';
-      else if (ky > 0) this.direction = 'down';
-      else if (kx < 0) this.direction = 'left';
-      else             this.direction = 'right';
+      if (Math.abs(dy) >= Math.abs(dx)) {
+        if      (dy < 0) this.direction = 'up';
+        else if (dy > 0) this.direction = 'down';
+      } else {
+        if      (dx < 0) this.direction = 'left';
+        else if (dx > 0) this.direction = 'right';
+      }
 
-      const len    = Math.hypot(kx, ky) || 1;
+      const len    = Math.hypot(dx, dy) || 1;
+      const speedScale = Math.min(1, Math.max(0.35, len));
       const newCol = Phaser.Math.Clamp(
-        this.playerCol + (kx / len) * this.maxSpeed, 0.5, this.mapCols - 1.5);
+        this.playerCol + (dx / len) * (this.maxSpeed * speedScale), 0.5, this.mapCols - 1.5);
       const newRow = Phaser.Math.Clamp(
-        this.playerRow + (ky / len) * this.maxSpeed, 0.5, this.mapRows - 1.5);
+        this.playerRow + (dy / len) * (this.maxSpeed * speedScale), 0.5, this.mapRows - 1.5);
 
       if (this.isCellWalkable(Math.floor(newCol), Math.floor(newRow))) {
         this.playerCol = newCol;
@@ -717,12 +884,25 @@ export default class IsoPrototypeScene extends Phaser.Scene {
       this.isMoving = false;
     }
 
+    // ── Attack animation timing ──────────────────────────────────
+    if (this.isAttacking) {
+      this.attackTimer++;
+      if (this.attackTimer >= this.ATTACK_ANIM_SPEED) {
+        this.attackTimer = 0;
+        this.attackFrame++;
+        if (this.attackFrame >= this.SLASH_FRAMES) {
+          this.isAttacking = false;
+          this.attackFrame = 0;
+        }
+      }
+    }
+
     // ── 3. Animation Timing ──────────────────────────────────────
     if (this.isMoving) {
       this.animTimer += (this.currentSpeed > 0 ? this.currentSpeed / this.maxSpeed : 1.0);
       if (this.animTimer >= this.ANIM_SPEED) {
         this.animTimer = 0;
-        this.animFrame = (this.animFrame + 1) % (this.isMoving ? this.WALK_FRAMES : this.IDLE_FRAMES);
+        this.animFrame = (this.animFrame + 1) % this.WALK_FRAMES;
       }
     } else {
       this.animTimer = 0;
@@ -782,6 +962,110 @@ export default class IsoPrototypeScene extends Phaser.Scene {
   }
 
   // ═══════════════════════════════════════════════════════════════
+  // Combat & Virtual Controller APIs
+  // ═══════════════════════════════════════════════════════════════
+
+  setVirtualAxis(x, y) {
+    this.virtualAxis = {
+      x: Phaser.Math.Clamp(Number(x) || 0, -1, 1),
+      y: Phaser.Math.Clamp(Number(y) || 0, -1, 1),
+    };
+  }
+
+  triggerAttack() {
+    const now = Date.now();
+    if (this.isAttacking || (now - this.lastAttackTime < this.attackCooldown)) {
+      return false;
+    }
+
+    this.lastAttackTime = now;
+    this.isAttacking = true;
+    this.attackFrame = 0;
+    this.attackTimer = 0;
+
+    this.drawCharFrame();
+    this.playSlashEffect();
+    return true;
+  }
+
+  playSlashEffect() {
+    const wp = this.toWorldPos(this.playerCol, this.playerRow);
+    const depth = 600 + this.playerCol + this.playerRow + 4;
+
+    let offsetX;
+    let offsetY;
+    let baseAngle;
+
+    switch (this.direction) {
+      case 'up':
+        offsetX = 0;
+        offsetY = -24;
+        baseAngle = -Math.PI / 2;
+        break;
+      case 'down':
+        offsetX = 0;
+        offsetY = 16;
+        baseAngle = Math.PI / 2;
+        break;
+      case 'left':
+        offsetX = -24;
+        offsetY = -6;
+        baseAngle = Math.PI;
+        break;
+      case 'right':
+      default:
+        offsetX = 24;
+        offsetY = -6;
+        baseAngle = 0;
+        break;
+    }
+
+    const slashOriginX = wp.x + offsetX;
+    const slashOriginY = wp.y + offsetY;
+
+    const gfx = this.add.graphics();
+    gfx.setDepth(depth);
+
+    const drawArc = (progress) => {
+      gfx.clear();
+      const radius = 18 + progress * 8;
+      const alpha = Math.max(0, 1 - progress);
+
+      // Outer cyan glow arc
+      gfx.lineStyle(4, 0x00f5ff, alpha * 0.85);
+      gfx.beginPath();
+      gfx.arc(slashOriginX, slashOriginY, radius, baseAngle - 0.75, baseAngle + 0.75, false);
+      gfx.strokePath();
+
+      // Inner sharp white arc
+      gfx.lineStyle(2, 0xffffff, alpha);
+      gfx.beginPath();
+      gfx.arc(slashOriginX, slashOriginY, radius, baseAngle - 0.5, baseAngle + 0.5, false);
+      gfx.strokePath();
+    };
+
+    drawArc(0);
+
+    let step = 0;
+    const timer = this.time.addEvent({
+      delay: 25,
+      repeat: 6,
+      callback: () => {
+        step++;
+        const progress = step / 6;
+        drawArc(progress);
+        if (step >= 6) {
+          gfx.destroy();
+          timer.destroy();
+        }
+      },
+    });
+
+    // Subtle punchy camera kick
+    this.cameras.main.shake(70, 0.0015);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
   // Helpers
   // ═══════════════════════════════════════════════════════════════
 
@@ -799,7 +1083,10 @@ export default class IsoPrototypeScene extends Phaser.Scene {
   }
 
   shutdown() {
-    this.scale.off('resize', () => {}, this);
+    this.scale.off('resize', this.handleResize, this);
+    this.registry.events.off('set_virtual_axis');
+    this.registry.events.off('trigger_virtual_attack');
+    this.registry.events.off('trigger_virtual_interact');
     this.input.off('pointerdown', this.handlePointerDown, this);
     if (this.hoverPulseTween) this.hoverPulseTween.stop();
     if (this.destPulseTween) this.destPulseTween.stop();
